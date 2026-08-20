@@ -51,4 +51,9 @@ npx -y @deepseek-ai/dsh@0.1.0-rc.8 web
 
 在 DSH 中添加作品目录为 workspace，新建或打开 Session 后使用 `/story` 或 `/short-drama`。小说与短剧工作台也可以随时通过左栏 Tab 切换。
 
+## 致谢
+
+- [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)：提供原生插件运行时、Agent、会话、权限审批与 Web 工作台基础。
+- [LINUX DO](https://linux.do/)：感谢社区的交流、反馈与开源支持。
+
 [贡献指南](CONTRIBUTING.md) · [架构说明](docs/ARCHITECTURE.md)
