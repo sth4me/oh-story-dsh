@@ -27,11 +27,17 @@ interface WorkspacePayload {
   readonly shortDrama: Record<string, unknown> | null;
   readonly mode: "dsh-session";
 }
-interface FilePayload { readonly path: string; readonly content: string; readonly bytes: number }
+interface FilePayload {
+  readonly path: string;
+  readonly content: string;
+  readonly bytes: number;
+  readonly version: string;
+}
 interface FileBuffer {
   readonly content: string;
   readonly saved: string;
   readonly source: "disk" | "human" | "agent";
+  readonly version: string;
 }
 
 const GROUP_ORDER: Readonly<Record<WorkbenchMode, readonly string[]>> = {
@@ -148,6 +154,7 @@ function CreativeWorkbench({ sessionId, useSession }: Pick<ConvViewProps, "sessi
   const initializedWorkbench = useRef(false);
   const [selected, setSelected] = useState<string>();
   const [buffers, setBuffers] = useState<Record<string, FileBuffer>>({});
+  const buffersRef = useRef<Record<string, FileBuffer>>({});
   const [refreshVersion, setRefreshVersion] = useState(0);
   const [fileError, setFileError] = useState<string>();
   const [conflict, setConflict] = useState<string>();
@@ -165,6 +172,8 @@ function CreativeWorkbench({ sessionId, useSession }: Pick<ConvViewProps, "sessi
   const structured = jsonl || selectedLower?.endsWith(".json") === true;
   const previewable = markdown || jsonl;
   const [editorMode, setEditorMode] = useState<"preview" | "source">("preview");
+
+  useEffect(() => { buffersRef.current = buffers; }, [buffers]);
 
   useEffect(() => {
     if (workspace === undefined || initializedWorkbench.current) return;
@@ -199,14 +208,15 @@ function CreativeWorkbench({ sessionId, useSession }: Pick<ConvViewProps, "sessi
     void fetch(endpoint("file", sessionId, selected), { signal: controller.signal })
       .then((response) => json<FilePayload>(response))
       .then((file) => {
-        setBuffers((current) => {
-          const existing = current[file.path];
-          if (existing?.source === "human" && existing.content !== existing.saved) {
-            setConflict(`${file.path} 已被 Agent 更新；你的未保存版本仍保留。`);
-            return current;
-          }
-          return { ...current, [file.path]: { content: file.content, saved: file.content, source: "disk" } };
-        });
+        const existing = buffersRef.current[file.path];
+        if (existing?.source === "human" && existing.content !== existing.saved) {
+          setConflict(`${file.path} 已被 Agent 更新；你的未保存版本仍保留。`);
+          return;
+        }
+        setBuffers((current) => ({
+          ...current,
+          [file.path]: { content: file.content, saved: file.content, source: "disk", version: file.version }
+        }));
       })
       .catch((reason: unknown) => {
         if (!controller.signal.aborted) setFileError(reason instanceof Error ? reason.message : String(reason));
@@ -230,7 +240,12 @@ function CreativeWorkbench({ sessionId, useSession }: Pick<ConvViewProps, "sessi
       if (currentBuffer?.source === "agent" && currentBuffer.content === next) return current;
       return {
         ...current,
-        [activityPath]: { content: next, saved: currentBuffer?.saved ?? "", source: "agent" }
+        [activityPath]: {
+          content: next,
+          saved: currentBuffer?.saved ?? "",
+          source: "agent",
+          version: currentBuffer?.version ?? ""
+        }
       };
     });
   }, [activity, activityPath, buffers]);
@@ -290,18 +305,29 @@ function CreativeWorkbench({ sessionId, useSession }: Pick<ConvViewProps, "sessi
 
   const save = useCallback(async () => {
     if (selected === undefined || buffer === undefined) return;
+    const submitted = buffer;
     setSaving(true);
     setFileError(undefined);
     try {
-      await json(await fetch(endpoint("file", sessionId, selected), {
+      const file = await json<FilePayload>(await fetch(endpoint("file", sessionId, selected), {
         method: "PUT",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ content: buffer.content })
+        body: JSON.stringify({ content: submitted.content, baseVersion: submitted.version })
       }));
-      setBuffers((current) => ({
-        ...current,
-        [selected]: { content: buffer.content, saved: buffer.content, source: "disk" }
-      }));
+      setBuffers((current) => {
+        const latest = current[selected];
+        if (latest === undefined) return current;
+        const unchanged = latest.content === submitted.content;
+        return {
+          ...current,
+          [selected]: {
+            content: unchanged ? file.content : latest.content,
+            saved: file.content,
+            source: unchanged ? "disk" : "human",
+            version: file.version
+          }
+        };
+      });
       setConflict(undefined);
       reload();
     } catch (reason) {
@@ -407,18 +433,25 @@ function CreativeWorkbench({ sessionId, useSession }: Pick<ConvViewProps, "sessi
         ? <div className="oh-story-empty">{workbench === "story"
             ? <>当前 workspace 还没有小说文件。可在右侧 Chat 中运行 <code>/story-setup</code>。</>
             : <>当前 workspace 还没有短剧项目。可在右侧 Chat 中运行 <code>/short-drama</code>。</>}</div>
+        : buffer === undefined
+          ? <div className="oh-story-empty">正在加载 {selected}…</div>
         : previewable && editorMode === "preview"
           ? markdown
-            ? <MarkdownPreview content={buffer?.content ?? ""} label={selected} />
-            : <JsonlPreview content={buffer?.content ?? ""} label={selected} />
+            ? <MarkdownPreview content={buffer.content} label={selected} />
+            : <JsonlPreview content={buffer.content} label={selected} />
           : <textarea
-            value={buffer?.content ?? ""}
+            value={buffer.content}
             data-format={structured ? "structured" : "prose"}
             onChange={(event) => {
               const content = event.target.value;
               setBuffers((current) => ({
                 ...current,
-                [selected]: { content, saved: current[selected]?.saved ?? "", source: "human" }
+                [selected]: {
+                  content,
+                  saved: current[selected]?.saved ?? "",
+                  source: "human",
+                  version: current[selected]?.version ?? ""
+                }
               }));
             }}
             onKeyDown={(event) => {
@@ -464,7 +497,7 @@ function CreativeSplitBridge(props: Pick<ConvViewProps, "sessionId" | "useSessio
   }, [target]);
   return <>
     <span ref={marker} className="oh-story-bridge-marker" aria-hidden />
-    {target === undefined ? null : createPortal(<CreativeWorkbench {...props} />, target)}
+    {target === undefined ? null : createPortal(<CreativeWorkbench key={props.sessionId} {...props} />, target)}
   </>;
 }
 

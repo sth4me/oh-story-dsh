@@ -24,9 +24,13 @@ const DSH_SKILL_BRIDGE = [
 const DSH_SKILL_OVERRIDES: Readonly<Partial<Record<string, string>>> = {
   story: "The 小说 workspace is an official DSH conversation view. Never start or open a second web application.",
   "story-setup": "Initialize or validate novel project data only. DSH already supplies Skills, Roles, hooks, tools, permissions, sessions, and UI; never deploy Claude/OpenCode/Codex/ZCode/OpenClaw/Reasonix files or a .story-deployed marker.",
+  "story-long-analyze": "Use oh_story_role for chapter extraction or specialist analysis. Never inspect platform agent directories or require a deployed external Agent definition.",
   "story-long-write": "All named Roles are provided through oh_story_role. Do not check platform agent files. Keep the upstream writing, Tracking, lint, outline, revision, and quality workflows.",
   "story-review": "All named reviewer Roles are provided through oh_story_role. Do not check platform agent files; full/lean review may use the bundled Roles directly.",
   "story-import": "All named Roles are provided through oh_story_role. Do not require story-setup to deploy them.",
+  "story-deslop": "Use the bundled narrative-writer Role through oh_story_role when specialist review is useful. Never inspect platform agent directories.",
+  "story-short-analyze": "Use oh_story_role for specialist analysis. Never inspect platform agent directories or require external Agent deployment.",
+  "story-short-write": "All named Roles are provided through oh_story_role. Do not inspect platform agent files; preserve the upstream short-fiction workflow and quality gates.",
   "browser-cdp": "Use only browser or web capabilities visible in the current DSH preset. Do not start a parallel browser host; if no compatible capability is visible, explain the limitation.",
   "story-cover": "Use only image-generation or HTTP capabilities visible in the current DSH preset. Never assume a separate Codex or Claude runtime."
 };
@@ -82,7 +86,38 @@ Agent、模型、权限、Session Log 和 UI 均由当前 DSH 会话管理。小
 1. 优先使用结构化搜索/抓取工具；需要登录态或交互页面时才使用可见浏览器能力。
 2. 尊重站点条款、访问频率与用户授权；不绕过验证码、付费墙或访问控制。
 3. 记录来源 URL、采集时间、失败项和数据质量，不把推断写成页面事实。
-4. 当前 Preset 没有兼容能力时，说明缺失能力和可行的手工步骤，不另起运行时。`
+4. 当前 Preset 没有兼容能力时，说明缺失能力和可行的手工步骤，不另起运行时。`,
+  "story-long-scan": `# story-long-scan — DSH 原生长篇扫榜
+
+基于可核验样本识别长篇网文趋势，不运行打包脚本、不提取登录凭据，也不绕过验证码、
+访问控制或站点限制。
+
+1. 明确平台、频道和题材方向；只有答案会改变采样范围时才问一个问题。
+2. 数据来源依次为：用户提供的数据或链接、当前 DSH Preset 可见的网页工具、
+   references/genre-trends.md 中的历史趋势。无法获取实时数据时必须明确标为历史假设。
+3. 每个样本记录来源 URL、采集日期、榜单口径、有效条目数、缺失字段和异常项；
+   不把搜索摘要、推断或过期缓存写成页面事实。
+4. 按题材分布、新题材信号、经典题材变化、篇幅与更新、书名模式、开头卖点和
+   差异化元素分析。需要决策门禁时使用 references/topic-decision.md。
+5. 输出市场概况、题材热度、证据与可信度、风险、三项可执行方向和下次复扫时间。
+
+当前 Preset 没有网页能力且用户也未提供样本时，使用内置参考完成方法论分析，
+并列出仍需核验的榜单；不要启动 CDP、独立浏览器或并行运行时。`,
+  "story-short-scan": `# story-short-scan — DSH 原生短篇扫榜
+
+基于可核验样本识别短篇市场的情绪、题材与传播信号，不运行打包脚本、不读取 Cookie
+或 token，也不绕过验证码、登录或访问控制。
+
+1. 明确平台与方向；只有答案会改变采样范围时才问一个问题。
+2. 数据来源依次为：用户提供的数据或链接、当前 DSH Preset 可见的网页工具、
+   references/real-market-data.md 中的历史资料。无法联网时必须把结论标为候选假设。
+3. 记录来源 URL、采集日期、榜单口径、有效样本数、缺失字段和异常项。
+4. 分析情绪类型、题材热点、篇幅、开头、结尾、标题、人设与传播触发点；
+   给每个趋势标注证据强度、饱和风险和有效期。
+5. 输出市场概况、情绪热度、题材热点、关键数据、风口预警、三项可写方向和复扫时间。
+
+当前 Preset 没有网页能力且用户也未提供样本时，只做历史资料分析并列出验证动作；
+不要启动 CDP、独立浏览器或并行运行时。`
 };
 
 interface ParsedSkill {

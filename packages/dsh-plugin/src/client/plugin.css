@@ -8,7 +8,7 @@
   --os-border: var(--dsw-alias-border-l2);
   --os-muted: var(--dsw-alias-label-tertiary);
   display: grid;
-  grid-template-columns: clamp(150px, 18%, 220px) minmax(320px, 1fr) minmax(340px, 38%);
+  grid-template-columns: clamp(108px, 16%, 190px) minmax(220px, 1fr) minmax(260px, 38%);
   grid-template-rows: minmax(0, 1fr);
   min-height: 0;
   overflow-x: hidden;
@@ -206,7 +206,7 @@
   padding: 2px;
   border: 1px solid var(--os-border);
   border-radius: 7px;
-  background: var(--dsw-alias-bg-l1);
+  background: var(--dsw-alias-bg-layer-1);
 }
 .oh-story-editor-tabs button { min-height: 24px; padding: 0 9px; border-radius: 5px; font-size: 11px; }
 .oh-story-editor-tabs button[aria-selected="true"] { background: var(--dsw-alias-bg-base); box-shadow: 0 1px 2px rgb(0 0 0 / 8%); }
@@ -271,7 +271,7 @@
 .oh-story-markdown th:last-child,
 .oh-story-markdown td:last-child { border-right: 0; }
 .oh-story-markdown tbody tr:last-child td { border-bottom: 0; }
-.oh-story-markdown th { background: var(--dsw-alias-bg-l1); font-weight: 600; }
+.oh-story-markdown th { background: var(--dsw-alias-bg-layer-1); font-weight: 600; }
 .oh-story-markdown hr { margin: 2em 0; border: 0; border-top: 1px solid var(--os-border); }
 .oh-story-markdown-empty { margin: auto; color: var(--os-muted); font-size: 13px; }
 
@@ -291,7 +291,7 @@
 .oh-story-jsonl-summary span { color: var(--os-muted); }
 .oh-story-jsonl-records { overflow: auto; padding: 14px 18px 36px; }
 .oh-story-jsonl details,
-.oh-story-jsonl-error { overflow: hidden; margin-bottom: 10px; border: 1px solid var(--os-border); border-radius: 10px; background: var(--dsw-alias-bg-l1); }
+.oh-story-jsonl-error { overflow: hidden; margin-bottom: 10px; border: 1px solid var(--os-border); border-radius: 10px; background: var(--dsw-alias-bg-layer-1); }
 .oh-story-jsonl summary { display: flex; min-height: 42px; align-items: center; gap: 9px; padding: 0 12px; cursor: pointer; list-style: none; font: 12px/1.4 ui-sans-serif, system-ui, "PingFang SC", sans-serif; }
 .oh-story-jsonl summary::-webkit-details-marker { display: none; }
 .oh-story-jsonl summary::before { content: "›"; color: var(--os-muted); font-size: 16px; transition: transform .12s ease; }
@@ -337,7 +337,7 @@
 
 @media (max-width: 980px) {
   [data-conversation-scroll]:has(> [data-slot="conversation.session"] > .oh-story-split-surface) {
-    grid-template-columns: 112px minmax(240px, 1fr) minmax(300px, 42%);
+    grid-template-columns: 104px minmax(210px, 1fr) minmax(252px, 40%);
   }
   .oh-story-editor textarea { padding-right: 28px; padding-left: 28px; }
 }

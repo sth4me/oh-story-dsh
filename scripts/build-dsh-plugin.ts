@@ -1,4 +1,4 @@
-import { cp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { access, cp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { relative, resolve } from "node:path";
 import { build, type Plugin } from "esbuild";
 
@@ -11,6 +11,8 @@ const platformGlue = [
   "skills/story/assets/",
   "skills/story/scripts/",
   "skills/browser-cdp/scripts/setup-cdp-chrome.js",
+  "skills/story-long-scan/scripts/",
+  "skills/story-short-scan/scripts/",
   "skills/story-setup/references/codex/",
   "skills/story-setup/references/generic/",
   "skills/story-setup/references/openclaw/",
@@ -65,7 +67,9 @@ await build({
   target: ["chrome120", "safari17"],
   sourcemap: true,
   treeShaking: true,
-  external: ["react", "react/jsx-runtime", "react-dom/client"],
+  define: { "process.env.NODE_ENV": '"production"' },
+  minifySyntax: true,
+  external: ["react", "react/jsx-runtime", "react-dom", "react-dom/client"],
   plugins: [inlineCss],
   banner: { js: "window.__ModuleLoader__.load({id:\"@oh-story/dsh\",factory:(require)=>{var module={exports:{}};var exports=module.exports;" },
   footer: { js: ";return module.exports;}});" }
@@ -94,9 +98,30 @@ await cp(dramaRoot, resolve(outputRoot, "drama"), {
   }
 });
 
+for (const excluded of [
+  "oh-story/skills/browser-cdp/scripts/setup-cdp-chrome.js",
+  "oh-story/skills/story-long-scan/scripts",
+  "oh-story/skills/story-short-scan/scripts"
+]) {
+  const present = await access(resolve(outputRoot, excluded)).then(() => true, () => false);
+  if (present) throw new Error(`Release bundle retained excluded platform/scraper code: ${excluded}`);
+}
+
 const hostBundle = await readFile(hostEntry, "utf8");
 for (const forbidden of ["dsh-sdk-jsonrpc", "DeepSeekHarness", "FakeRuntimeAdapter", "NativeDshRuntimeAdapter", "EventSource"]) {
   if (hostBundle.includes(forbidden)) {
     throw new Error(`Native DSH plugin bundle retained forbidden parallel runtime code: ${forbidden}`);
   }
+}
+
+const clientEntry = resolve(outputRoot, "client.js");
+const clientBundle = await readFile(clientEntry, "utf8");
+for (const forbidden of ["react-dom.development", "react.development", "process.env.NODE_ENV"]) {
+  if (clientBundle.includes(forbidden)) {
+    throw new Error(`Browser bundle retained development runtime code: ${forbidden}`);
+  }
+}
+const clientBytes = Buffer.byteLength(clientBundle);
+if (clientBytes > 400_000) {
+  throw new Error(`Browser bundle exceeds the 400 KB release budget: ${String(clientBytes)} bytes`);
 }

@@ -14,8 +14,8 @@
 ## 安装
 
 ```bash
-npx -y @deepseek-ai/dsh plugin --profile web add @oh-story/dsh
-npx -y @deepseek-ai/dsh web
+npx -y @deepseek-ai/dsh@0.1.0-rc.8 plugin --profile web add @oh-story/dsh@0.1.0
+npx -y @deepseek-ai/dsh@0.1.0-rc.8 web
 ```
 
 将作品目录添加为 DSH workspace，然后在普通 Agent 会话中使用 `/story` 或 `/short-drama`。模型、凭据、Preset、权限、会话记录、停止/继续、Todo、审批和 Composer 均使用当前 DeepSeek Harness 配置与界面。

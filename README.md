@@ -45,8 +45,8 @@
 需要 Node.js 24+。安装插件并启动 DSH Web：
 
 ```bash
-npx -y @deepseek-ai/dsh plugin --profile web add @oh-story/dsh
-npx -y @deepseek-ai/dsh web
+npx -y @deepseek-ai/dsh@0.1.0-rc.8 plugin --profile web add @oh-story/dsh@0.1.0
+npx -y @deepseek-ai/dsh@0.1.0-rc.8 web
 ```
 
 在 DSH 中添加作品目录为 workspace，新建或打开 Session 后使用 `/story` 或 `/short-drama`。小说与短剧工作台也可以随时通过左栏 Tab 切换。

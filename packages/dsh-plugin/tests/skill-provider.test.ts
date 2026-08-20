@@ -33,6 +33,14 @@ describe("Oh Story bundled skill provider", () => {
     const browserCandidate = candidates.find((candidate) => candidate.name === "browser-cdp");
     const browser = await provider.get(browserCandidate!, {});
     expect(browser?.content).not.toContain("setup-cdp-chrome.js 9222");
+    for (const name of ["story-long-scan", "story-short-scan"]) {
+      const candidate = candidates.find((value) => value.name === name);
+      const scan = await provider.get(candidate!, {});
+      expect(scan?.content).toContain("当前 DSH Preset 可见的网页工具");
+      expect(scan?.content).not.toContain("rank-scraper.js");
+      expect(scan?.content).not.toContain("WebFetch");
+      expect(scan?.content).not.toContain("Bearer token");
+    }
   });
 
   it("rejects missing frontmatter", () => {

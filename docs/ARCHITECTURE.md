@@ -26,7 +26,7 @@ The Host entry registers five contributions in the current Cordis context:
 
 Both providers prepend a small DSH bridge at load time. The bridge maps upstream platform integration points to the current Session, tools, approvals and UI while leaving craft instructions and references intact. The short-drama production bridge retains the upstream exact-job confirmation contract.
 
-The file route resolves `cwd` from the supplied DSH `sessionId`, canonicalizes every path, checks each segment and symbolic link, and limits access to the documented novel and short-drama project directories. Child Sessions do not receive an editor route.
+The file route first applies the same Host, Origin and Fetch Metadata trust boundary as DSH's native browser API. It then resolves `cwd` from the supplied DSH `sessionId`, canonicalizes every path, checks each segment and symbolic link, and limits access to the documented novel and short-drama project directories. Loopback is trusted by default; explicit non-loopback authorities must be declared through the plugin's `trustedHosts` config. Child Sessions do not receive an editor route.
 
 ## Browser entry
 
@@ -41,7 +41,7 @@ The bridge portals the file tree and editor into the stable `conversation.sessio
 
 The workbench reads the public `ConversationSnapshot` fields `runningCalls` and `partial`. Active `write`, `edit` and `str_replace_editor` arguments are decoded while streaming, restricted to a supported creative path and projected over the last disk version. The file tree preserves every project directory level; selection changes also switch the 小说/短剧 mode and expand the matching group plus all ancestor directories.
 
-When the Agent is idle, a capture listener recognizes existing workspace file links inside the official conversation. Those links update the same selection state used by Agent file following. Human-dirty buffers take precedence over incoming disk or Agent state and surface a conflict message.
+When the Agent is idle, a capture listener recognizes existing workspace file links inside the official conversation. Those links update the same selection state used by Agent file following. Human-dirty buffers take precedence over incoming disk or Agent state and surface a conflict message. File reads carry a content version; saves use that version as a precondition and reject stale writes instead of overwriting concurrent disk changes.
 
 Markdown rendering is implemented as a safe React element tree with tables, task lists, quotes and fenced code. Raw HTML is treated as text and external links are limited to HTTP(S). JSONL is parsed one record per source line, keeps malformed lines visible, and summarizes stable IDs, types and statuses. Every preview shares its buffer and save path with source editing.
 
@@ -49,7 +49,7 @@ Markdown rendering is implemented as a safe React element tree with tables, task
 
 `packages/knowledge/oh-story/manifest.json` pins the Oh Story release, commit, 13 Skills, 7 Roles, agents version and every file hash. `packages/knowledge/drama/manifest.json` performs the same role for 10 Drama Skills.
 
-The Drama Skills standalone dashboard server and assets are omitted during synchronization because the creator surface is supplied by the DSH workbench. All remaining workflow, reference, validation and adapter resources are packaged with their upstream paths.
+The Drama Skills standalone dashboard server and assets are omitted during synchronization because the creator surface is supplied by the DSH workbench. Oh Story's login/CDP rank scrapers are also excluded; the two scan Skills use DSH-native, visible-tool research instructions instead. Remaining workflow, reference, validation and production-adapter resources are packaged with their upstream paths.
 
 ## Release boundary
 

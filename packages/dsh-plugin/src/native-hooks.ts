@@ -53,7 +53,10 @@ export async function validateStoryMutation(mutation: StoryMutation): Promise<st
   const hasLongFormLayout = await exists(resolve(mutation.root, "大纲")) || await exists(resolve(mutation.root, "追踪"));
   if (!hasLongFormLayout) return undefined;
   if (!(await exists(resolve(mutation.root, "追踪/_tracking-state.json")))) {
-    return "Oh Story 阻止写入正文：长篇项目缺少 追踪/_tracking-state.json。请先运行 /story-setup 或 /story-import 修复项目协议。";
+    // Setup/import must be able to bootstrap an existing manuscript before the
+    // canonical Tracking file exists. The Skill remains responsible for
+    // creating it; hard guards begin once the project has committed Tracking.
+    return undefined;
   }
   if (mutation.chapter !== undefined && !(await hasChapterOutline(mutation.root, mutation.chapter))) {
     return `Oh Story 阻止写入第 ${String(mutation.chapter)} 章：未找到对应的 大纲/细纲_第XXX章*.md。请先完成细纲。`;
@@ -61,23 +64,23 @@ export async function validateStoryMutation(mutation: StoryMutation): Promise<st
   return undefined;
 }
 
+export async function decideStoryMutation(
+  exec: ToolExecution,
+  next: () => Promise<PreToolDecision>
+): Promise<PreToolDecision> {
+  const mutation = storyMutation(exec);
+  if (mutation === undefined) return next();
+  const reason = await validateStoryMutation(mutation);
+  if (reason !== undefined) return { kind: "deny", reason };
+  return next();
+}
+
 /**
  * Native DSH equivalents of the upstream prose guards. They join DSH's typed
  * tool waterfall, so decisions remain visible in the official approval/tool UI.
  */
 export function registerOhStoryHooks(context: Context): void {
-  context.on("tools/pre-execute", async (exec, next): Promise<PreToolDecision> => {
-    const mutation = storyMutation(exec);
-    if (mutation === undefined) return next();
-    const reason = await validateStoryMutation(mutation);
-    if (reason !== undefined) return { kind: "deny", reason };
-    const downstream = await next();
-    if (downstream.kind !== "allow") return downstream;
-    return {
-      kind: "ask",
-      reason: `Oh Story 将通过当前 DSH 会话修改 ${mutation.path}。确认正文目标、细纲与 Tracking 已同步。`
-    };
-  });
+  context.on("tools/pre-execute", decideStoryMutation);
 
   context.on("tools/post-execute", async (exec, result, next): Promise<PostToolDecision> => {
     const mutation = storyMutation(exec);

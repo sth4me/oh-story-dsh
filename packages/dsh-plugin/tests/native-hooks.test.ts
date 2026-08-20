@@ -1,8 +1,9 @@
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import type { ToolExecution } from "@deepseek-ai/dsh-tools";
 import { afterEach, describe, expect, it } from "vitest";
-import { detectStoryMutation, validateStoryMutation } from "../src/native-hooks.js";
+import { decideStoryMutation, detectStoryMutation, validateStoryMutation } from "../src/native-hooks.js";
 
 const roots: string[] = [];
 
@@ -32,10 +33,10 @@ describe("native DSH prose guards", () => {
     }, "/books/demo")).toBeUndefined();
   });
 
-  it("requires canonical Tracking before a long-form prose mutation", async () => {
+  it("allows setup and import to bootstrap prose before canonical Tracking exists", async () => {
     const root = await project();
     await expect(validateStoryMutation({ root, path: "正文/第002章.md", chapter: 2 }))
-      .resolves.toContain("_tracking-state.json");
+      .resolves.toBeUndefined();
   });
 
   it("requires the matching chapter outline", async () => {
@@ -51,6 +52,17 @@ describe("native DSH prose guards", () => {
     await writeFile(join(root, "大纲", "细纲_第002章_回声.md"), "# 第二章\n");
     await expect(validateStoryMutation({ root, path: "正文/第002章.md", chapter: 2 }))
       .resolves.toBeUndefined();
+  });
+
+  it("preserves DSH's downstream permission decision instead of forcing ask", async () => {
+    const root = await project();
+    const exec = {
+      name: "write",
+      arguments: { file_path: "正文/第002章.md" },
+      agent: { session: { header: { cwd: root } } }
+    } as unknown as ToolExecution;
+    await expect(decideStoryMutation(exec, async () => ({ kind: "allow" })))
+      .resolves.toEqual({ kind: "allow" });
   });
 
   it("does not impose long-form guards on a plain short-story workspace", async () => {

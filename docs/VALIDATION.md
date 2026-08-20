@@ -21,7 +21,8 @@ The paid real-provider layer is intentionally excluded from Pull Request CI. It 
 | Capability catalog | Native DSH Session exposes 13 Oh Story Skills and 10 Drama Skills |
 | Upstream integrity | Both knowledge manifests verify pinned commits, catalogs and every bundled file hash |
 | Plugin boundary | Host bundle and source audit keep all DSH imports inside `@oh-story/dsh` |
-| Workspace safety | Tests cover canonical paths, missing write targets, traversal, absolute paths and symbolic-link escape |
+| Workspace safety | Tests cover same-origin/Host trust, canonical paths, traversal, absolute paths and symbolic-link escape |
+| Editor concurrency | Versioned GET/PUT rejects stale saves; Chrome edits, saves, rereads and restores a real workspace file |
 | File following | Tests cover partial tool JSON, streamed write/edit projection, creative path classification and workbench switching |
 | Markdown rendering | Component tests cover tables, task lists, fenced code, inline formatting, safe links and inert raw HTML |
 | JSONL rendering | Component tests cover typed record summaries, source line numbers, scalar records and per-line parse failures |
@@ -31,20 +32,20 @@ The paid real-provider layer is intentionally excluded from Pull Request CI. It 
 | Roles and hooks | Tests cover Role catalog, DSH child-Agent invocation and novel mutation guards |
 | Package contents | Build and pack include both pinned knowledge sets, package metadata and license while omitting source tests and the standalone Drama Dashboard |
 
-Current deterministic result: 8 test files and 25 tests passing.
+Current deterministic result: 11 test files and 32 tests passing.
 
 ## Native DSH Web audit
 
 `pnpm test:dsh` creates an isolated DSH installation and profile, packs `@oh-story/dsh`, installs the tarball through `dsh plugin --profile web add`, and starts the official Web UI. The Chrome pass verifies:
 
 - 13 Oh Story Skills and 10 Drama Skills in the Session catalog;
-- Session-scoped workspace reads and path-traversal rejection;
+- Session-scoped workspace reads, stale-write rejection and path-traversal rejection;
 - published Browser module and official UI slot registrations;
 - 小说/短剧 navigation, recursive project directories, Markdown table/task rendering and JSONL structured rendering;
 - source editing, saved-state behavior and no duplicate Agent activity UI;
 - ordered tree/editor/Chat geometry and a Composer that remains fixed during long-message scrolling.
 
-The same audited surface generates both README demos through `pnpm demo:story` and `pnpm demo:drama`. Each command collapses the DSH navigation rail, removes the expected credential-less failure card from the capture surface, records four current workbench states, and replaces its GIF deterministically.
+The same audited surface generates both README demos through `pnpm demo:story` and `pnpm demo:drama`. Each command collapses the DSH navigation rail, crops the capture to the real workbench (so the credential-less smoke turn is not presented as a model demo), records four current workbench states, and replaces its GIF deterministically.
 
 ## Real DeepSeek observation
 

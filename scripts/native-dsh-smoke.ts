@@ -14,28 +14,21 @@ async function captureDemoFrame(page: Page, workbench: "story" | "drama", index:
   if (demoFramesDirectory === undefined) return;
   await mkdir(demoFramesDirectory, { recursive: true });
   await page.waitForTimeout(180);
+  const tree = await page.locator(".oh-story-tree").boundingBox();
+  const editor = await page.locator(".oh-story-editor").boundingBox();
+  if (tree === null || editor === null) throw new Error("Could not locate the workbench for demo capture.");
+  const x = Math.max(0, tree.x - 56);
+  const width = editor.x + editor.width - x;
+  const height = Math.min(tree.height, width * 0.625);
   await page.screenshot({
     path: join(demoFramesDirectory, `${workbench}-${String(index).padStart(2, "0")}.png`),
-    animations: "disabled"
+    animations: "disabled",
+    clip: { x, y: tree.y, width, height }
   });
 }
 
 async function prepareDemoSurface(page: Page): Promise<void> {
   if (demoFramesDirectory === undefined) return;
-  const failure = page.getByText(/^This (?:turn|has) failed\b/iu).first();
-  if (await failure.count() > 0) {
-    await failure.evaluate((element) => {
-      let container = element as HTMLElement;
-      while (container.parentElement !== null) {
-        const parent = container.parentElement;
-        const box = parent.getBoundingClientRect();
-        if (box.height > 240 || box.width > 520) break;
-        container = parent;
-      }
-      container.style.display = "none";
-    });
-    if (await failure.isVisible()) throw new Error("Credential failure card remained visible on the demo surface.");
-  }
   const collapse = page.getByRole("button", { name: /^(?:Collapse sidebar|收起侧边栏)$/u }).first();
   await collapse.waitFor({ state: "visible", timeout: 10_000 });
   await collapse.click();
@@ -242,6 +235,27 @@ async function main(): Promise<void> {
     }
     const escaped = await fetch(`${origin}/oh-story/file?sessionId=${encodeURIComponent(createdSession.sessionId)}&path=${encodeURIComponent("../package.json")}`);
     if (escaped.ok) throw new Error("Workspace route allowed path traversal.");
+    const chapterUrl = `${origin}/oh-story/file?sessionId=${encodeURIComponent(createdSession.sessionId)}&path=${encodeURIComponent("正文/第001章_雨夜.md")}`;
+    const chapterResponse = await fetch(chapterUrl);
+    const chapter = await chapterResponse.json() as { readonly content?: string; readonly version?: string };
+    if (!chapterResponse.ok || chapter.content === undefined || chapter.version === undefined) {
+      throw new Error(`Workspace file version was unavailable: ${JSON.stringify(chapter)}`);
+    }
+    const staleWrite = await fetch(chapterUrl, {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ content: chapter.content, baseVersion: "stale-version" })
+    });
+    if (staleWrite.status !== 412) throw new Error(`Workspace route accepted a stale write: ${String(staleWrite.status)}.`);
+    const unchangedWrite = await fetch(chapterUrl, {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ content: chapter.content, baseVersion: chapter.version })
+    });
+    const unchanged = await unchangedWrite.json() as { readonly version?: string };
+    if (!unchangedWrite.ok || unchanged.version !== chapter.version) {
+      throw new Error(`Workspace optimistic save failed: ${JSON.stringify(unchanged)}`);
+    }
 
     const index = await (await fetch(origin)).text();
     const clientPath = index.match(/\/plugins\/[^"']*oh-story[^"']*client\.js[^"']*/u)?.[0];
@@ -289,6 +303,25 @@ async function main(): Promise<void> {
       await page.getByRole("button", { name: "第001章_雨夜.md", exact: true }).click();
       await page.getByRole("article", { name: "正文/第001章_雨夜.md 渲染预览" }).waitFor({ state: "visible", timeout: 10_000 });
       await captureDemoFrame(page, "story", 1);
+      await page.getByRole("tab", { name: "源码", exact: true }).click();
+      const chapterEditor = page.getByRole("textbox", { name: "正文/第001章_雨夜.md" });
+      await chapterEditor.waitFor({ state: "visible", timeout: 10_000 });
+      const editedChapter = `${chapter.content}\n<!-- native DSH editor smoke -->\n`;
+      await chapterEditor.fill(editedChapter);
+      const saveButton = page.getByRole("button", { name: "保存", exact: true });
+      await saveButton.click();
+      await saveButton.waitFor({ state: "hidden", timeout: 10_000 });
+      const savedResponse = await fetch(chapterUrl);
+      const savedChapter = await savedResponse.json() as { readonly content?: string; readonly version?: string };
+      if (!savedResponse.ok || savedChapter.content !== editedChapter || savedChapter.version === undefined) {
+        throw new Error(`Browser editor did not save through the versioned route: ${JSON.stringify(savedChapter)}`);
+      }
+      const restoredResponse = await fetch(chapterUrl, {
+        method: "PUT",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ content: chapter.content, baseVersion: savedChapter.version })
+      });
+      if (!restoredResponse.ok) throw new Error(`Could not restore the editor smoke fixture: ${String(restoredResponse.status)}.`);
       await page.locator(".oh-story-file-group > summary").filter({ hasText: "大纲" }).click();
       await page.getByRole("button", { name: "细纲_第001章.md", exact: true }).click();
       const outline = page.getByRole("article", { name: "大纲/细纲_第001章.md 渲染预览" });
@@ -369,6 +402,23 @@ async function main(): Promise<void> {
       await scrollerLocator.evaluate((element) => { element.scrollTo({ top: 0 }); });
       if (composerScroll.some((sample) => !sample.visible) || Math.max(...composerScroll.map((sample) => sample.top)) - Math.min(...composerScroll.map((sample) => sample.top)) > 1) {
         throw new Error(`Official Composer did not remain fixed while Chat scrolled: ${JSON.stringify(composerScroll)}`);
+      }
+      // DSH reserves its own navigation/sidebar width. A 842 px browser gives
+      // the conversation center roughly its documented 640 px minimum.
+      await page.setViewportSize({ width: 842, height: 900 });
+      await page.waitForTimeout(100);
+      const narrowScroller = await scrollerLocator.evaluate((element) => ({
+        clientWidth: element.clientWidth,
+        scrollWidth: element.scrollWidth
+      }));
+      const narrowTree = await page.locator(".oh-story-tree").boundingBox();
+      const narrowEditor = await page.locator(".oh-story-editor").boundingBox();
+      const narrowChat = await chatLocator.boundingBox();
+      if (narrowTree === null || narrowEditor === null || narrowChat === null
+        || narrowScroller.clientWidth < 620
+        || narrowScroller.scrollWidth > narrowScroller.clientWidth + 1
+        || narrowTree.width < 100 || narrowEditor.width < 200 || narrowChat.width < 240) {
+        throw new Error(`Workbench overflowed the minimum DSH center width: ${JSON.stringify({ narrowScroller, narrowTree, narrowEditor, narrowChat })}`);
       }
       if (pageErrors.length > 0) throw new Error(`Browser module raised errors: ${pageErrors.join("; ")}`);
     } finally {
