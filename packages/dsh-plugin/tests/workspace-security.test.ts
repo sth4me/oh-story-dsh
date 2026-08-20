@@ -1,4 +1,4 @@
-import { mkdtemp, mkdir, rm, symlink, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, realpath, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -11,7 +11,7 @@ describe("workspace path security", () => {
       await mkdir(join(root, "剧集"));
       await writeFile(join(root, "剧集", "第01集.md"), "雨夜");
       const canonical = await canonicalWorkspaceRoot(root);
-      expect(canonical.endsWith(root)).toBe(true);
+      expect(canonical).toBe(await realpath(root));
       await expect(resolveWorkspacePath(root, "剧集/第01集.md", { expect: "file" }))
         .resolves.toBe(join(canonical, "剧集", "第01集.md"));
       await expect(resolveWorkspacePath(root, "剧集/第02集.md", { allowMissing: true }))

@@ -5,8 +5,8 @@ import { build, type Plugin } from "esbuild";
 const root = resolve(import.meta.dirname, "..");
 const packageRoot = resolve(root, "packages/dsh-plugin");
 const outputRoot = resolve(packageRoot, "lib");
-const vendorRoot = resolve(root, "packages/knowledge/vendor");
-const dramaVendorRoot = resolve(root, "packages/knowledge/drama");
+const ohStoryRoot = resolve(root, "packages/knowledge/oh-story");
+const dramaRoot = resolve(root, "packages/knowledge/drama");
 const platformGlue = [
   "skills/story/assets/",
   "skills/story/scripts/",
@@ -71,11 +71,11 @@ await build({
   footer: { js: ";return module.exports;}});" }
 });
 
-await cp(vendorRoot, resolve(outputRoot, "knowledge"), {
+await cp(ohStoryRoot, resolve(outputRoot, "oh-story"), {
   recursive: true,
   filter: (source) => {
     const normalized = source.replaceAll("\\", "/");
-    const bundledPath = relative(vendorRoot, source).replaceAll("\\", "/");
+    const bundledPath = relative(ohStoryRoot, source).replaceAll("\\", "/");
     return !normalized.includes("/__pycache__/")
       && !normalized.endsWith("/__pycache__")
       && !normalized.endsWith(".pyc")
@@ -84,7 +84,7 @@ await cp(vendorRoot, resolve(outputRoot, "knowledge"), {
   }
 });
 
-await cp(dramaVendorRoot, resolve(outputRoot, "drama"), {
+await cp(dramaRoot, resolve(outputRoot, "drama"), {
   recursive: true,
   filter: (source) => {
     return !source.includes("/__pycache__/")

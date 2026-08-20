@@ -1,7 +1,32 @@
 {
   "name": "@oh-story/dsh",
   "version": "0.1.0-alpha.0",
-  "description": "Native DeepSeek Harness workbenches for fiction and short drama",
+  "description": "Native DeepSeek Harness workbenches for fiction and short-drama production",
+  "keywords": [
+    "deepseek-harness",
+    "dsh-plugin",
+    "oh-story",
+    "drama-skills",
+    "creative-writing",
+    "fiction-writing",
+    "novel-writing",
+    "short-drama",
+    "screenwriting",
+    "ai-agents"
+  ],
+  "homepage": "https://github.com/worldwonderer/oh-story-dsh#readme",
+  "bugs": "https://github.com/worldwonderer/oh-story-dsh/issues",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/worldwonderer/oh-story-dsh.git",
+    "directory": "packages/dsh-plugin"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=24.0.0"
+  },
   "type": "module",
   "main": "./lib/index.js",
   "types": "./lib/types/index.d.ts",
@@ -32,6 +57,7 @@
   "files": [
     "cordis.patch.yml",
     "lib/**/*",
+    "LICENSE",
     "README.md"
   ],
   "scripts": {

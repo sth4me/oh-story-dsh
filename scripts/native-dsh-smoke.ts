@@ -4,10 +4,37 @@ import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { chromium } from "@playwright/test";
+import { chromium, type Page } from "@playwright/test";
 
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const dshVersion = "0.1.0-rc.8";
+const demoFramesDirectory = process.env.OH_STORY_DEMO_FRAMES_DIR;
+
+async function captureDemoFrame(page: Page, index: number): Promise<void> {
+  if (demoFramesDirectory === undefined) return;
+  await mkdir(demoFramesDirectory, { recursive: true });
+  await page.waitForTimeout(180);
+  await page.screenshot({
+    path: join(demoFramesDirectory, `story-${String(index).padStart(2, "0")}.png`),
+    animations: "disabled"
+  });
+}
+
+async function prepareDemoSurface(page: Page): Promise<void> {
+  if (demoFramesDirectory === undefined) return;
+  const failure = page.getByText(/^This (?:turn|has) failed\b/iu).first();
+  if (await failure.count() === 0) return;
+  await failure.evaluate((element) => {
+    let container = element as HTMLElement;
+    while (container.parentElement !== null) {
+      const parent = container.parentElement;
+      const box = parent.getBoundingClientRect();
+      if (box.height > 240 || box.width > 520) break;
+      container = parent;
+    }
+    container.style.display = "none";
+  });
+}
 
 function run(command: string, args: readonly string[], env: NodeJS.ProcessEnv = process.env): void {
   const result = spawnSync(command, args, { cwd: repositoryRoot, env, encoding: "utf8", stdio: "pipe" });
@@ -82,14 +109,30 @@ async function main(): Promise<void> {
     await Promise.all([
       mkdir(join(fixtureRoot, "正文"), { recursive: true }),
       mkdir(join(fixtureRoot, "大纲"), { recursive: true }),
+      mkdir(join(fixtureRoot, "设定", "角色"), { recursive: true }),
       mkdir(join(fixtureRoot, "追踪"), { recursive: true }),
       mkdir(join(fixtureRoot, "剧集"), { recursive: true }),
       mkdir(join(fixtureRoot, "项目开发"), { recursive: true })
     ]);
     await Promise.all([
-      writeFile(join(fixtureRoot, "正文", "第001章_雨夜.md"), "# 第一章 雨夜\n\n林舟在雨里停下脚步。\n"),
-      writeFile(join(fixtureRoot, "大纲", "细纲_第001章.md"), "# 第一章细纲\n\n- 林舟抵达旧站。\n"),
+      writeFile(join(fixtureRoot, "正文", "第001章_雨夜.md"), [
+        "# 第一章 雨夜", "", "> 本章目标：让铜钥匙第一次回应旧站，并留下站内仍有人活动的证据。", "",
+        "## 旧站", "", "雨线斜切过废弃站牌。林舟把铜钥匙攥在掌心，锯齿硌得发疼。", "",
+        "售票窗后的灯忽然亮了。玻璃上没有人影，只有一张新写的车票慢慢滑到窗口前。", "",
+        "**终点：旧渡站。发车时间：二十三年前。**"
+      ].join("\n")),
+      writeFile(join(fixtureRoot, "大纲", "细纲_第001章.md"), [
+        "# 第一章细纲", "", "| 节拍 | 冲突 | 结果 |", "| :--- | :--- | :--- |",
+        "| 抵达旧站 | 林舟想避雨，却发现站内有灯 | 被迫进入 |",
+        "| 车票出现 | 车票日期早于林舟出生 | 铜钥匙发热 |", "",
+        "- [x] 建立雨夜与废站氛围", "- [x] 投放铜钥匙异常", "- [ ] 回收售票员身份"
+      ].join("\n")),
+      writeFile(join(fixtureRoot, "设定", "角色", "林舟.md"), "# 林舟\n\n谨慎，随身携带一把来历不明的铜钥匙。\n"),
       writeFile(join(fixtureRoot, "追踪", "_tracking-state.json"), '{"state_revision":1,"last_committed_chapter":1}\n'),
+      writeFile(join(fixtureRoot, "追踪", "characters.jsonl"), [
+        '{"record_type":"character","character_id":"CHAR-LINZHOU","display_name":"林舟","status":"active","traits":["谨慎","观察敏锐"]}',
+        '{"record_type":"mystery","record_id":"MYSTERY-COPPER-KEY","title":"铜钥匙来历","status":"open","first_seen":"正文/第001章_雨夜.md"}'
+      ].join("\n") + "\n"),
       writeFile(join(fixtureRoot, "short-drama.json"), `${JSON.stringify({
         schema_version: "1.0.0-draft",
         project_id: "SMOKE-DRAMA",
@@ -113,8 +156,23 @@ async function main(): Promise<void> {
     const dshBin = join(installation, "node_modules", "@deepseek-ai", "dsh", "lib", "bin.js");
     const tarball = (await readdir(packDirectory)).find((entry) => entry.endsWith(".tgz"));
     if (tarball === undefined) throw new Error("Plugin pack did not create a tarball.");
+    const archivePath = join(packDirectory, tarball);
+    const archive = spawnSync("tar", ["-tzf", archivePath], { cwd: repositoryRoot, encoding: "utf8", stdio: "pipe" });
+    if (archive.status !== 0) throw new Error(`Could not inspect plugin tarball:\n${archive.stderr}`);
+    const entries = new Set(archive.stdout.split("\n").filter((entry) => entry !== ""));
+    for (const required of [
+      "package/LICENSE", "package/README.md", "package/cordis.patch.yml", "package/package.json",
+      "package/lib/index.js", "package/lib/client.js", "package/lib/oh-story/manifest.json", "package/lib/drama/manifest.json"
+    ]) {
+      if (!entries.has(required)) throw new Error(`Plugin tarball is missing ${required}.`);
+    }
+    for (const entry of entries) {
+      if (/\/(?:src|tests)\//u.test(entry) || /dashboard_server\.py$/u.test(entry) || entry.endsWith("/.DS_Store")) {
+        throw new Error(`Plugin tarball retained forbidden content: ${entry}`);
+      }
+    }
     const env = { ...process.env, DSH_HOME: dshHome, DSH_TELEMETRY_DISABLED: "1" };
-    run(process.execPath, [dshBin, "plugin", "--profile", "web", "add", join(packDirectory, tarball)], env);
+    run(process.execPath, [dshBin, "plugin", "--profile", "web", "add", archivePath], env);
     const port = new URL(origin).port;
     child = spawn(process.execPath, [dshBin, "web", "--no-open", "--port", port], {
       cwd: repositoryRoot, env, stdio: ["ignore", "pipe", "pipe"]
@@ -136,7 +194,7 @@ async function main(): Promise<void> {
     await rpc(origin, "session.prompt", {
       sessionId: createdSession.sessionId,
       mode: "queue",
-      content: [{ type: "text", text: "Oh Story native UI smoke; no project action is requested." }]
+      content: [{ type: "text", text: "请帮我继续完善这个故事。" }]
     });
     const nonBlankDeadline = Date.now() + 15_000;
     let nonBlank = false;
@@ -195,10 +253,31 @@ async function main(): Promise<void> {
         const body = (await page.locator("body").innerText()).slice(0, 4_000);
         throw new Error(`Three-column story surface was not visible; tabs=${JSON.stringify(tabs)}; pageErrors=${JSON.stringify(pageErrors)}; body=${JSON.stringify(body)}`, { cause: error });
       }
-      await page.getByText("Oh Story native UI smoke; no project action is requested.", { exact: true }).waitFor({ state: "visible", timeout: 10_000 });
+      await page.getByText("请帮我继续完善这个故事。", { exact: true }).waitFor({ state: "visible", timeout: 10_000 });
+      await prepareDemoSurface(page);
       const previewTab = page.getByRole("tab", { name: "预览" });
       await previewTab.waitFor({ state: "visible", timeout: 10_000 });
       if (await page.getByRole("button", { name: "已保存", exact: true }).count() !== 0) throw new Error("Editor header still renders a redundant saved button.");
+      await page.getByRole("button", { name: "第001章_雨夜.md", exact: true }).click();
+      await page.getByRole("article", { name: "正文/第001章_雨夜.md 渲染预览" }).waitFor({ state: "visible", timeout: 10_000 });
+      await captureDemoFrame(page, 1);
+      await page.locator(".oh-story-file-group > summary").filter({ hasText: "大纲" }).click();
+      await page.getByRole("button", { name: "细纲_第001章.md", exact: true }).click();
+      const outline = page.getByRole("article", { name: "大纲/细纲_第001章.md 渲染预览" });
+      await outline.waitFor({ state: "visible", timeout: 10_000 });
+      if (await outline.locator("table").count() !== 1 || await outline.getByRole("checkbox").count() !== 3) {
+        throw new Error("Markdown preview did not render the outline table and task list.");
+      }
+      await captureDemoFrame(page, 2);
+      await page.locator(".oh-story-file-group > summary").filter({ hasText: "追踪" }).click();
+      await page.getByRole("button", { name: "characters.jsonl", exact: true }).click();
+      const jsonlPreview = page.getByRole("region", { name: "追踪/characters.jsonl 结构化预览" });
+      await jsonlPreview.waitFor({ state: "visible", timeout: 10_000 });
+      await jsonlPreview.getByText("2 条记录", { exact: true }).waitFor({ state: "visible", timeout: 10_000 });
+      await captureDemoFrame(page, 3);
+      await page.getByRole("tab", { name: "源码", exact: true }).click();
+      await page.getByRole("textbox", { name: "追踪/characters.jsonl" }).waitFor({ state: "visible", timeout: 10_000 });
+      await captureDemoFrame(page, 4);
       await page.getByRole("tab", { name: "短剧", exact: true }).click();
       await page.getByRole("navigation", { name: "短剧项目文件" }).waitFor({ state: "visible", timeout: 10_000 });
       await page.getByRole("button", { name: "第01集.md", exact: true }).click();

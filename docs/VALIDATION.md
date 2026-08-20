@@ -2,43 +2,75 @@
 
 Target: DeepSeek Harness `0.1.0-rc.8` · validated 2026-08-20.
 
+## Test architecture
+
+| Layer | Command | Coverage |
+| --- | --- | --- |
+| Deterministic quality gate | `pnpm verify` | ESLint, TypeScript, pinned asset hashes/catalogs, DSH boundary audit, unit/component tests, Host/Browser build |
+| Cross-platform gate | `pnpm verify:portable` | Type, asset, unit and build behavior on macOS and Windows |
+| Packaged DSH integration | `pnpm test:dsh` | Build, npm tarball, profile installation, official DSH Web startup, Session APIs, skill catalog, workspace routes and Chrome UI |
+| Real provider | `pnpm test:dsh:real` | Official DeepSeek model, durable Agent completion, Oh Story Role calls, fiction review, short-drama review, read-only project digest and credential redaction |
+| Release candidate | `pnpm verify:release` | Deterministic gate plus packaged DSH integration before tarball creation |
+
+The paid real-provider layer is intentionally excluded from Pull Request CI. It is available as a manual GitHub Actions workflow and requires the repository Secret `DEEPSEEK_API_KEY`.
+
 ## Automated coverage
 
 | Area | Evidence |
 | --- | --- |
 | Capability catalog | Native DSH Session exposes 13 Oh Story Skills and 10 Drama Skills |
-| Upstream integrity | Both knowledge manifests verify pinned commits, catalogs and file hashes |
+| Upstream integrity | Both knowledge manifests verify pinned commits, catalogs and every bundled file hash |
 | Plugin boundary | Host bundle and source audit keep all DSH imports inside `@oh-story/dsh` |
-| Workspace safety | Unit tests cover canonical paths, missing write targets, traversal, absolute paths and symbolic-link escape |
-| File following | Unit tests cover partial tool JSON, streamed write/edit projection, creative path classification and workbench switching |
+| Workspace safety | Tests cover canonical paths, missing write targets, traversal, absolute paths and symbolic-link escape |
+| File following | Tests cover partial tool JSON, streamed write/edit projection, creative path classification and workbench switching |
+| Markdown rendering | Component tests cover tables, task lists, fenced code, inline formatting, safe links and inert raw HTML |
+| JSONL rendering | Component tests cover typed record summaries, source line numbers, scalar records and per-line parse failures |
 | Three-column layout | Native DSH Chrome smoke checks ordered tree/editor/Chat geometry and minimum usable widths |
 | Composer stability | Scroll regression confirms the official Composer remains fixed inside the Chat column |
-| Dual workbench | Native smoke switches 小说/短剧, opens a drama file and verifies Markdown preview/source modes |
-| Editor header | Native smoke asserts that the saved state has no redundant action button |
-| Roles and hooks | Unit tests cover Role catalog, DSH child-Agent invocation and novel mutation guards |
-| Package contents | Build and pack include both pinned knowledge sets and omit the Drama Skills standalone Dashboard surface |
+| Dual workbench | Native smoke switches 小说/短剧 and opens Markdown and JSONL preview/source modes |
+| Roles and hooks | Tests cover Role catalog, DSH child-Agent invocation and novel mutation guards |
+| Package contents | Build and pack include both pinned knowledge sets, package metadata and license while omitting source tests and the standalone Drama Dashboard |
 
-## Manual Chrome audit
+Current deterministic result: 8 test files and 25 tests passing.
 
-The packaged plugin was installed into official DSH Web and opened against the Drama Skills golden project. The audit confirmed:
+## Native DSH Web audit
 
-- short-drama metadata selects the 短剧 workbench and displays title, episode count and aspect ratio;
-- the initial document is `剧集/EP001/screenplay.md` in rendered preview mode;
-- top-level project areas and episode folders are independently collapsible;
-- Markdown preview/source switching preserves the current file and shared buffer;
-- the official Chat, Trajectory and bottom Composer remain in the third column;
-- the same live page produced `docs/images/short-drama-dsh-demo.gif`.
+`pnpm test:dsh` creates an isolated DSH installation and profile, packs `@oh-story/dsh`, installs the tarball through `dsh plugin --profile web add`, and starts the official Web UI. The Chrome pass verifies:
 
-The novel workbench was previously audited with a 5,298 px conversation and a real streamed file write. The Composer retained the same viewport position at the top, middle and end of the message scroll; the editor observed 94 incremental content states during the write.
+- 13 Oh Story Skills and 10 Drama Skills in the Session catalog;
+- Session-scoped workspace reads and path-traversal rejection;
+- published Browser module and official UI slot registrations;
+- 小说/短剧 navigation, Markdown table/task rendering and JSONL structured rendering;
+- source editing, saved-state behavior and no duplicate Agent activity UI;
+- ordered tree/editor/Chat geometry and a Composer that remains fixed during long-message scrolling.
+
+The same audited surface generates the novel demo through `pnpm demo:story`; the command captures four current DSH states and replaces `docs/images/oh-story-dsh-demo.gif` deterministically.
+
+## Real DeepSeek observation
+
+The release test used `deepseek-official/deepseek-v4-flash` against the packed plugin:
+
+- `story-review` completed with 4 `oh_story_role` calls and 20,003 durable Session events;
+- `short-drama-review` completed with 7,816 durable Session events;
+- both sessions produced durable assistant output;
+- the combined fiction/short-drama project digest remained unchanged;
+- the API credential did not appear in captured DSH logs.
+
+Event totals are observations, not fixed assertions.
+
+## CI workflows
+
+- `.github/workflows/ci.yml`: Ubuntu quality gate, macOS/Windows portability, then packaged DSH Web integration.
+- `.github/workflows/real-provider.yml`: manual paid real-provider test; cleanly skips when the Secret is absent.
+- `.github/workflows/release.yml`: tag/manual release candidate gate and `.tgz` artifact upload; npm publication remains an explicit external action.
 
 ## Commands
 
 ```bash
 pnpm verify
 pnpm test:dsh
+pnpm verify:release
 DEEPSEEK_API_KEY_FILE=/path/to/key pnpm test:dsh:real
+pnpm demo:story
+pnpm pack:release
 ```
-
-`test:dsh:real` creates an isolated temporary project and DSH home, runs a read-only `story-review` through the official DeepSeek provider, requires bundled Role calls and durable completion, verifies the project tree is unchanged, and redacts the credential from all errors and logs.
-
-Latest real-model observation: `deepseek-official/deepseek-v4-flash`, 3 `oh_story_role` calls, 16,072 durable Session events, successful completion and an unchanged project digest. Event totals are observational and are not fixed test assertions.

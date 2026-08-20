@@ -23,8 +23,8 @@ function roleBody(source: string): string {
 export function defaultBundledRoleRoot(): string {
   const current = dirname(fileURLToPath(import.meta.url));
   return basename(current) === "src"
-    ? resolve(current, "../../knowledge/vendor/roles")
-    : resolve(current, "knowledge/roles");
+    ? resolve(current, "../../knowledge/oh-story/roles")
+    : resolve(current, "oh-story/roles");
 }
 
 export async function loadBundledRole(
@@ -41,7 +41,7 @@ export async function loadBundledRole(
         "Return only the output contract requested by the caller; never claim to have changed the project."
       ]
     : [
-        "You are running as a native Oh Story DSH specialist. The current DSH workspace and visible tool set are your complete authority boundary.",
+        "You are running as a native oh-story-dsh specialist. The current DSH workspace and visible tool set are your complete authority boundary.",
         "Never inspect or require legacy .claude/.opencode/.codex agent deployment files; this exact pinned Role is already active.",
         "Use only the tools actually visible to you. Mutate files only when the caller explicitly requests it and your visible DSH tools permit it; otherwise return findings to the caller."
       ];

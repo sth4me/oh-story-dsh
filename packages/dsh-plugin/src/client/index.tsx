@@ -11,6 +11,7 @@ import {
   type WorkbenchMode,
   type FileMutationActivity
 } from "./file-activity.js";
+import { JsonlPreview } from "./jsonl-preview.js";
 import { MarkdownPreview } from "./markdown-preview.js";
 import styles from "./plugin.css?inline";
 
@@ -114,7 +115,11 @@ function CreativeWorkbench({ sessionId, useSession }: Pick<ConvViewProps, "sessi
   const settleTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const buffer = selected === undefined ? undefined : buffers[selected];
   const dirty = buffer?.source === "human" && buffer.content !== buffer.saved;
-  const markdown = selected?.toLocaleLowerCase().endsWith(".md") === true;
+  const selectedLower = selected?.toLocaleLowerCase();
+  const markdown = selectedLower?.endsWith(".md") === true;
+  const jsonl = selectedLower?.endsWith(".jsonl") === true;
+  const structured = jsonl || selectedLower?.endsWith(".json") === true;
+  const previewable = markdown || jsonl;
   const [editorMode, setEditorMode] = useState<"preview" | "source">("preview");
 
   useEffect(() => {
@@ -129,8 +134,8 @@ function CreativeWorkbench({ sessionId, useSession }: Pick<ConvViewProps, "sessi
   }, [activityMode]);
 
   useEffect(() => {
-    setEditorMode(markdown ? "preview" : "source");
-  }, [selected]);
+    setEditorMode(previewable ? "preview" : "source");
+  }, [previewable, selected]);
 
   useEffect(() => {
     if (activityPath !== undefined) { setSelected(activityPath); return; }
@@ -363,7 +368,7 @@ function CreativeWorkbench({ sessionId, useSession }: Pick<ConvViewProps, "sessi
       <header>
         <span title={selected}>{selected ?? `在当前 DSH workspace 中选择${workbench === "story" ? "小说" : "短剧"}文件`}</span>
         <div className="oh-story-editor-actions">
-          {markdown && <div className="oh-story-editor-tabs" role="tablist" aria-label="Markdown 查看方式">
+          {previewable && <div className="oh-story-editor-tabs" role="tablist" aria-label={markdown ? "Markdown 查看方式" : "JSONL 查看方式"}>
             <button type="button" role="tab" aria-selected={editorMode === "preview"} onClick={() => { setEditorMode("preview"); }}>预览</button>
             <button type="button" role="tab" aria-selected={editorMode === "source"} onClick={() => { setEditorMode("source"); }}>源码</button>
           </div>}
@@ -379,10 +384,13 @@ function CreativeWorkbench({ sessionId, useSession }: Pick<ConvViewProps, "sessi
         ? <div className="oh-story-empty">{workbench === "story"
             ? <>当前 workspace 还没有小说文件。可在右侧 Chat 中运行 <code>/story-setup</code>。</>
             : <>当前 workspace 还没有短剧项目。可在右侧 Chat 中运行 <code>/short-drama</code>。</>}</div>
-        : markdown && editorMode === "preview"
-          ? <MarkdownPreview content={buffer?.content ?? ""} label={selected} />
+        : previewable && editorMode === "preview"
+          ? markdown
+            ? <MarkdownPreview content={buffer?.content ?? ""} label={selected} />
+            : <JsonlPreview content={buffer?.content ?? ""} label={selected} />
           : <textarea
             value={buffer?.content ?? ""}
+            data-format={structured ? "structured" : "prose"}
             onChange={(event) => {
               const content = event.target.value;
               setBuffers((current) => ({
@@ -396,7 +404,7 @@ function CreativeWorkbench({ sessionId, useSession }: Pick<ConvViewProps, "sessi
                 void save();
               }
             }}
-            spellCheck
+            spellCheck={!structured}
             aria-label={selected}
           />}
     </main>

@@ -6,7 +6,7 @@ import { OH_STORY_ROLE_NAMES, loadBundledRole } from "../src/role-provider.js";
 describe("bundled Oh Story roles", () => {
   it("loads all seven upstream role definitions as DSH personas", async () => {
     expect(OH_STORY_ROLE_NAMES).toHaveLength(7);
-    const root = resolve(import.meta.dirname, "../../knowledge/vendor/roles");
+    const root = resolve(import.meta.dirname, "../../knowledge/oh-story/roles");
     for (const name of OH_STORY_ROLE_NAMES) {
       const source = await readFile(resolve(root, `${name}.md`), "utf8");
       const persona = await loadBundledRole(name, root);
@@ -17,7 +17,7 @@ describe("bundled Oh Story roles", () => {
   });
 
   it("adapts the same exact role body for native DSH tool execution", async () => {
-    const persona = await loadBundledRole("narrative-writer", resolve(import.meta.dirname, "../../knowledge/vendor/roles"), "native-tools");
+    const persona = await loadBundledRole("narrative-writer", resolve(import.meta.dirname, "../../knowledge/oh-story/roles"), "native-tools");
     expect(persona).toContain("current DSH workspace and visible tool set");
     expect(persona).not.toContain("do not call tools");
   });

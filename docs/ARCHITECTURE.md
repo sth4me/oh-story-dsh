@@ -1,6 +1,6 @@
 # Architecture
 
-Oh Story DSH is a Cordis plugin loaded into DeepSeek Harness. The repository ships one product package, `@oh-story/dsh`, with Host and Browser entries.
+oh-story-dsh is a Cordis plugin loaded into DeepSeek Harness. The repository ships one product package, `@oh-story/dsh`, with Host and Browser entries.
 
 ## Ownership
 
@@ -43,11 +43,11 @@ The workbench reads the public `ConversationSnapshot` fields `runningCalls` and 
 
 When the Agent is idle, a capture listener recognizes existing workspace file links inside the official conversation. Those links update the same selection state used by Agent file following. Human-dirty buffers take precedence over incoming disk or Agent state and surface a conflict message.
 
-Markdown rendering is implemented as a safe React element tree. Raw HTML is treated as text; external links are limited to HTTP(S). Source editing and rendered preview share one buffer and save path.
+Markdown rendering is implemented as a safe React element tree with tables, task lists, quotes and fenced code. Raw HTML is treated as text and external links are limited to HTTP(S). JSONL is parsed one record per source line, keeps malformed lines visible, and summarizes stable IDs, types and statuses. Every preview shares its buffer and save path with source editing.
 
 ## Upstream assets
 
-`packages/knowledge/vendor/manifest.json` pins the Oh Story release, commit, 13 Skills, 7 Roles, agents version and every file hash. `packages/knowledge/drama/manifest.json` performs the same role for 10 Drama Skills.
+`packages/knowledge/oh-story/manifest.json` pins the Oh Story release, commit, 13 Skills, 7 Roles, agents version and every file hash. `packages/knowledge/drama/manifest.json` performs the same role for 10 Drama Skills.
 
 The Drama Skills standalone dashboard server and assets are omitted during synchronization because the creator surface is supplied by the DSH workbench. All remaining workflow, reference, validation and adapter resources are packaged with their upstream paths.
 

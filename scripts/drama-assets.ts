@@ -8,7 +8,7 @@ import { promisify } from "node:util";
 const execFileAsync = promisify(execFile);
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
-export const dramaVendorRoot = join(repoRoot, "packages/knowledge/drama");
+export const dramaRoot = join(repoRoot, "packages/knowledge/drama");
 
 export interface DramaAssetManifest {
   readonly schemaVersion: 1;
@@ -49,10 +49,10 @@ async function fileDigest(path: string): Promise<{ readonly sha256: string; read
   return { sha256: createHash("sha256").update(bytes).digest("hex"), bytes: bytes.byteLength };
 }
 
-export async function currentDramaVendorFiles(): Promise<DramaAssetManifest["files"]> {
-  return Promise.all((await regularFiles(dramaVendorRoot))
+export async function currentDramaFiles(): Promise<DramaAssetManifest["files"]> {
+  return Promise.all((await regularFiles(dramaRoot))
     .filter((path) => basename(path) !== "manifest.json")
-    .map(async (path) => ({ path: portableRelative(dramaVendorRoot, path), ...await fileDigest(path) })));
+    .map(async (path) => ({ path: portableRelative(dramaRoot, path), ...await fileDigest(path) })));
 }
 
 export async function synchronizeDramaAssets(): Promise<DramaAssetManifest> {
@@ -60,10 +60,10 @@ export async function synchronizeDramaAssets(): Promise<DramaAssetManifest> {
   if (!(await stat(source).catch(() => undefined))?.isDirectory()) {
     throw new Error(`Drama Skills upstream not found: ${source}. Set DRAMA_SKILLS_UPSTREAM_DIR.`);
   }
-  await rm(dramaVendorRoot, { recursive: true, force: true });
-  await mkdir(dramaVendorRoot, { recursive: true });
+  await rm(dramaRoot, { recursive: true, force: true });
+  await mkdir(dramaRoot, { recursive: true });
   const sourceSkills = join(source, "skills");
-  await cp(sourceSkills, join(dramaVendorRoot, "skills"), {
+  await cp(sourceSkills, join(dramaRoot, "skills"), {
     recursive: true,
     dereference: false,
     filter: (path) => {
@@ -72,8 +72,8 @@ export async function synchronizeDramaAssets(): Promise<DramaAssetManifest> {
         && !bundledPath.startsWith("short-drama/assets/dashboard/");
     }
   });
-  await cp(join(source, "LICENSE"), join(dramaVendorRoot, "LICENSE.upstream"));
-  const skills = (await readdir(join(dramaVendorRoot, "skills"), { withFileTypes: true }))
+  await cp(join(source, "LICENSE"), join(dramaRoot, "LICENSE.upstream"));
+  const skills = (await readdir(join(dramaRoot, "skills"), { withFileTypes: true }))
     .filter((entry) => entry.isDirectory())
     .map((entry) => entry.name)
     .sort();
@@ -85,12 +85,12 @@ export async function synchronizeDramaAssets(): Promise<DramaAssetManifest> {
     },
     generatedAt: new Date().toISOString(),
     skills,
-    files: await currentDramaVendorFiles()
+    files: await currentDramaFiles()
   };
-  await writeFile(join(dramaVendorRoot, "manifest.json"), `${JSON.stringify(manifest, null, 2)}\n`);
+  await writeFile(join(dramaRoot, "manifest.json"), `${JSON.stringify(manifest, null, 2)}\n`);
   return manifest;
 }
 
 export async function readDramaManifest(): Promise<DramaAssetManifest> {
-  return JSON.parse(await readFile(join(dramaVendorRoot, "manifest.json"), "utf8")) as DramaAssetManifest;
+  return JSON.parse(await readFile(join(dramaRoot, "manifest.json"), "utf8")) as DramaAssetManifest;
 }

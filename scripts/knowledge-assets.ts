@@ -12,7 +12,7 @@ function portableRelative(root: string, path: string): string {
   return relative(root, path).split(sep).join("/");
 }
 
-export const vendorRoot = join(repoRoot, "packages/knowledge/vendor");
+export const ohStoryRoot = join(repoRoot, "packages/knowledge/oh-story");
 export const generatedRoot = join(repoRoot, "packages/knowledge/generated");
 const platformGlue = [
   "story/assets/",
@@ -95,9 +95,9 @@ export async function buildManifest(root: string, generatedAt: string): Promise<
   const agentsVersion = Number(agentsVersionMatch[1]);
   const commit = await git(root, "rev-parse", "HEAD");
   const repository = await git(root, "remote", "get-url", "origin");
-  const files = await Promise.all((await regularFiles(vendorRoot))
+  const files = await Promise.all((await regularFiles(ohStoryRoot))
     .filter((path) => basename(path) !== "manifest.json")
-    .map(async (path) => ({ path: portableRelative(vendorRoot, path), ...await fileDigest(path) })));
+    .map(async (path) => ({ path: portableRelative(ohStoryRoot, path), ...await fileDigest(path) })));
   return {
     schemaVersion: 2,
     upstream: { repository, commit, releaseVersion, agentsVersion },
@@ -114,11 +114,11 @@ export async function synchronizeAssets(): Promise<AssetManifest> {
   if (!sourceStats?.isDirectory()) {
     throw new Error(`Oh Story upstream not found: ${source}. Set OH_STORY_UPSTREAM_DIR.`);
   }
-  await rm(vendorRoot, { recursive: true, force: true });
-  await mkdir(vendorRoot, { recursive: true });
+  await rm(ohStoryRoot, { recursive: true, force: true });
+  await mkdir(ohStoryRoot, { recursive: true });
   await mkdir(generatedRoot, { recursive: true });
   const sourceSkills = join(source, "skills");
-  await cp(sourceSkills, join(vendorRoot, "skills"), {
+  await cp(sourceSkills, join(ohStoryRoot, "skills"), {
     recursive: true,
     dereference: false,
     filter: (path) => {
@@ -126,21 +126,21 @@ export async function synchronizeAssets(): Promise<AssetManifest> {
       return !platformGlue.some((entry) => bundledPath === entry.replace(/\/$/u, "") || bundledPath.startsWith(entry));
     }
   });
-  await cp(join(source, "skills/story-setup/references/templates/agents"), join(vendorRoot, "roles"), { recursive: true });
-  await cp(join(source, "LICENSE"), join(vendorRoot, "LICENSE.upstream"));
+  await cp(join(source, "skills/story-setup/references/templates/agents"), join(ohStoryRoot, "roles"), { recursive: true });
+  await cp(join(source, "LICENSE"), join(ohStoryRoot, "LICENSE.upstream"));
   const generatedAt = new Date().toISOString();
   const manifest = await buildManifest(source, generatedAt);
-  await writeFile(join(vendorRoot, "manifest.json"), `${JSON.stringify(manifest, null, 2)}\n`);
+  await writeFile(join(ohStoryRoot, "manifest.json"), `${JSON.stringify(manifest, null, 2)}\n`);
   return manifest;
 }
 
 export async function readManifest(): Promise<AssetManifest> {
-  return JSON.parse(await readFile(join(vendorRoot, "manifest.json"), "utf8")) as AssetManifest;
+  return JSON.parse(await readFile(join(ohStoryRoot, "manifest.json"), "utf8")) as AssetManifest;
 }
 
-export async function currentVendorFiles(): Promise<AssetManifest["files"]> {
-  const files = await regularFiles(vendorRoot);
+export async function currentOhStoryFiles(): Promise<AssetManifest["files"]> {
+  const files = await regularFiles(ohStoryRoot);
   return Promise.all(files
     .filter((path) => basename(path) !== "manifest.json")
-    .map(async (path) => ({ path: portableRelative(vendorRoot, path), ...await fileDigest(path) })));
+    .map(async (path) => ({ path: portableRelative(ohStoryRoot, path), ...await fileDigest(path) })));
 }

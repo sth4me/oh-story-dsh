@@ -121,8 +121,8 @@ export function dshSkillContent(name: string, content: string): string {
 export function defaultBundledSkillRoot(): string {
   const current = dirname(fileURLToPath(import.meta.url));
   return basename(current) === "src"
-    ? resolve(current, "../../knowledge/vendor/skills")
-    : resolve(current, "knowledge/skills");
+    ? resolve(current, "../../knowledge/oh-story/skills")
+    : resolve(current, "oh-story/skills");
 }
 
 export function defaultDramaSkillRoot(): string {

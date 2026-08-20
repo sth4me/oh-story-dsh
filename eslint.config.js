@@ -11,7 +11,7 @@ export default tseslint.config(
       "**/coverage/**",
       "**/node_modules/**",
       "docs/blueprint/**",
-      "packages/knowledge/vendor/**",
+      "packages/knowledge/oh-story/**",
       "release/**"
     ]
   },

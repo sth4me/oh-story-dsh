@@ -1,11 +1,11 @@
 import { stat } from "node:fs/promises";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
-import { currentDramaVendorFiles, dramaUpstreamRoot, readDramaManifest } from "./drama-assets.js";
+import { currentDramaFiles, dramaUpstreamRoot, readDramaManifest } from "./drama-assets.js";
 
 const execFileAsync = promisify(execFile);
 const manifest = await readDramaManifest();
-const actualFiles = await currentDramaVendorFiles();
+const actualFiles = await currentDramaFiles();
 if (JSON.stringify(actualFiles) !== JSON.stringify(manifest.files)) {
   throw new Error("Bundled Drama Skills files differ from manifest; run pnpm assets:sync:drama.");
 }

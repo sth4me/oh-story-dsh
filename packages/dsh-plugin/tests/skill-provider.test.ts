@@ -2,7 +2,7 @@ import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { createDramaSkillProvider, createOhStorySkillProvider, parseBundledSkill } from "../src/skill-provider.js";
 
-const skillRoot = resolve(import.meta.dirname, "../../knowledge/vendor/skills");
+const skillRoot = resolve(import.meta.dirname, "../../knowledge/oh-story/skills");
 const dramaRoot = resolve(import.meta.dirname, "../../knowledge/drama/skills");
 
 describe("Oh Story bundled skill provider", () => {

@@ -35,19 +35,29 @@ async function waitForServer(origin: string): Promise<void> {
 
 async function rpc<T>(origin: string, method: string, payload: unknown): Promise<T> {
   const rpcId = `oh-story-real-${crypto.randomUUID()}`;
-  const response = await fetch(`${origin}/api/${method}`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ type: "client-request", rpcId, method, payload })
-  });
-  const envelope = await response.json() as {
-    readonly rpcId: string;
-    readonly result: { readonly ok: true; readonly value: T } | { readonly ok: false; readonly error: { readonly code: string; readonly message: string } };
-  };
-  if (!response.ok || envelope.rpcId !== rpcId || !envelope.result.ok) {
-    throw new Error(`DSH ${method} failed: ${JSON.stringify(envelope)}`);
+  const deadline = Date.now() + 15_000;
+  while (true) {
+    const response = await fetch(`${origin}/api/${method}`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ type: "client-request", rpcId, method, payload })
+    });
+    const body = await response.text();
+    if (response.status === 404 && body.trim() === "not found" && Date.now() < deadline) {
+      await new Promise((accept) => setTimeout(accept, 100));
+      continue;
+    }
+    let envelope: {
+      readonly rpcId: string;
+      readonly result: { readonly ok: true; readonly value: T } | { readonly ok: false; readonly error: { readonly code: string; readonly message: string } };
+    };
+    try { envelope = JSON.parse(body) as typeof envelope; }
+    catch { throw new Error(`DSH ${method} returned HTTP ${String(response.status)} with a non-JSON body: ${body.slice(0, 200)}`); }
+    if (!response.ok || envelope.rpcId !== rpcId || !envelope.result.ok) {
+      throw new Error(`DSH ${method} failed: ${JSON.stringify(envelope)}`);
+    }
+    return envelope.result.value;
   }
-  return envelope.result.value;
 }
 
 async function stop(child: ChildProcess): Promise<void> {
@@ -93,6 +103,22 @@ async function treeDigest(root: string): Promise<string> {
 
 interface HistoryEvent { readonly type: string; readonly seq: number; readonly data: unknown }
 
+async function waitForCompletedTurn(origin: string, sessionId: string): Promise<readonly HistoryEvent[]> {
+  const deadline = Date.now() + 600_000;
+  while (Date.now() < deadline) {
+    const history = await rpc<{ readonly events: readonly { readonly event: HistoryEvent }[] }>(origin, "session.history", { sessionId, maxMessages: 1_000 });
+    const events = history.events.map((entry) => entry.event);
+    const end = [...events].reverse().find((event) => event.type === "turn/end");
+    if (end !== undefined) {
+      const reason = (end.data as { readonly reason?: { readonly kind?: string } }).reason?.kind;
+      if (reason !== "completed") throw new Error(`DSH Agent turn ended with ${String(reason)}.`);
+      return events;
+    }
+    await new Promise((accept) => setTimeout(accept, 750));
+  }
+  throw new Error("DSH Agent turn did not complete within ten minutes.");
+}
+
 async function main(): Promise<void> {
   const apiKey = await readApiKey();
   const temporaryRoot = await mkdtemp(join(tmpdir(), "oh-story-native-dsh-real-"));
@@ -109,13 +135,30 @@ async function main(): Promise<void> {
       mkdir(join(projectRoot, "正文"), { recursive: true }),
       mkdir(join(projectRoot, "大纲"), { recursive: true }),
       mkdir(join(projectRoot, "设定", "角色"), { recursive: true }),
-      mkdir(join(projectRoot, "追踪"), { recursive: true })
+      mkdir(join(projectRoot, "追踪"), { recursive: true }),
+      mkdir(join(projectRoot, "剧集", "EP001"), { recursive: true }),
+      mkdir(join(projectRoot, "项目开发"), { recursive: true })
     ]);
     await Promise.all([
       writeFile(join(projectRoot, "正文", "第001章_雨夜.md"), "# 第一章 雨夜\n\n林舟握着铜钥匙走进废弃车站。雨棚下没有脚印，售票窗却亮着灯。\n"),
       writeFile(join(projectRoot, "大纲", "细纲_第001章.md"), "# 第一章细纲\n\n- 林舟进入废弃车站。\n- 铜钥匙与异常灯光构成悬念。\n"),
       writeFile(join(projectRoot, "设定", "角色", "林舟.md"), "# 林舟\n\n谨慎，随身携带一把来历不明的铜钥匙。\n"),
-      writeFile(join(projectRoot, "追踪", "_tracking-state.json"), '{"state_revision":1,"last_committed_chapter":1}\n')
+      writeFile(join(projectRoot, "追踪", "_tracking-state.json"), '{"state_revision":1,"last_committed_chapter":1}\n'),
+      writeFile(join(projectRoot, "short-drama.json"), `${JSON.stringify({
+        schema_version: "1.0.0-draft",
+        project_id: "REAL-DRAMA",
+        title: "雨停之前",
+        language: "zh-CN",
+        format: { aspect_ratio: "9:16", episode_count: 1 }
+      }, null, 2)}\n`),
+      writeFile(join(projectRoot, "项目开发", "creative-brief.md"), "# 创作简报\n\n旧渡站悬疑竖屏短剧，以一张跨越二十三年的车票作为本集钩子。\n"),
+      writeFile(join(projectRoot, "剧集", "EP001", "screenplay.md"), [
+        "# EP001 雨夜车票", "", "## EP001-SC001 内 · 旧渡站售票厅 · 夜 / 暴雨", "",
+        "林舟推开锈死的玻璃门。售票窗后的灯突然亮起，一张湿漉漉的车票从缝隙里滑出来。", "",
+        "林舟（压低声音）：谁在里面？", "",
+        "扩音器：请持票人准时上车。", "", "[画面文字] 车票：旧渡站 → 临江，2003 年 8 月 20 日。", "",
+        "林舟摊开掌心。铜钥匙正在发热。"
+      ].join("\n") + "\n")
     ]);
     const before = await treeDigest(projectRoot);
     run("pnpm", ["--filter", "@oh-story/dsh", "build"]);
@@ -164,32 +207,33 @@ async function main(): Promise<void> {
       clientTimeZone: "America/Los_Angeles"
     });
 
-    const deadline = Date.now() + 600_000;
-    let events: readonly HistoryEvent[] = [];
-    let completed = false;
-    while (Date.now() < deadline) {
-      const history = await rpc<{ readonly events: readonly { readonly event: HistoryEvent }[] }>(origin, "session.history", { sessionId: session.sessionId, maxMessages: 1_000 });
-      events = history.events.map((entry) => entry.event);
-      const end = [...events].reverse().find((event) => event.type === "turn/end");
-      if (end !== undefined) {
-        const reason = (end.data as { readonly reason?: { readonly kind?: string } }).reason?.kind;
-        if (reason !== "completed") throw new Error(`DSH Agent turn ended with ${String(reason)}.`);
-        completed = true;
-        break;
-      }
-      await new Promise((accept) => setTimeout(accept, 750));
-    }
-    if (!completed) throw new Error("DSH Agent turn did not complete within ten minutes.");
-    const roleCalls = events.filter((event) => event.type === "tool/call")
+    const storyEvents = await waitForCompletedTurn(origin, session.sessionId);
+    const roleCalls = storyEvents.filter((event) => event.type === "tool/call")
       .map((event) => event.data as { readonly name?: string; readonly arguments?: string })
       .filter((data) => data.name === "oh_story_role");
     const roleArguments = roleCalls.map((call) => call.arguments ?? "").join("\n");
     for (const role of ["story-explorer", "consistency-checker"]) {
       if (!roleArguments.includes(role)) throw new Error(`Real DSH Agent did not call required Role ${role}.`);
     }
-    if (!events.some((event) => event.type === "assistant/message")) throw new Error("DSH Session has no durable assistant result.");
+    if (!storyEvents.some((event) => event.type === "assistant/message")) throw new Error("Story review Session has no durable assistant result.");
+
+    const dramaSession = await rpc<{ readonly sessionId: string }>(origin, "session.create", { workspaceId: workspace.workspace.workspaceId });
+    await rpc(origin, "session.selectModel", { sessionId: dramaSession.sessionId, provider: deepseek.id, model: selectedModel });
+    const dramaSkills = await rpc<{ readonly skills: readonly { readonly name: string }[] }>(origin, "skill.list", { sessionId: dramaSession.sessionId });
+    if (!dramaSkills.skills.some((skill) => skill.name === "short-drama-review")) throw new Error("short-drama-review was not registered in the DSH Session.");
+    await rpc(origin, "session.prompt", {
+      sessionId: dramaSession.sessionId,
+      mode: "queue",
+      content: [{
+        type: "text",
+        text: "/short-drama-review story_script 只读审查 剧集/EP001/screenplay.md。只输出审查结论，不修改文件，不生成 findings 或 verdict 文件，也不调用任何生产步骤。"
+      }],
+      clientTimeZone: "America/Los_Angeles"
+    });
+    const dramaEvents = await waitForCompletedTurn(origin, dramaSession.sessionId);
+    if (!dramaEvents.some((event) => event.type === "assistant/message")) throw new Error("Short-drama review Session has no durable assistant result.");
     const after = await treeDigest(projectRoot);
-    if (after !== before) throw new Error("Read-only story review unexpectedly modified the project.");
+    if (after !== before) throw new Error("Read-only release flows unexpectedly modified the project.");
     const remainingKey = logs.join("").includes(apiKey);
     if (remainingKey) throw new Error("DSH logs exposed the API key.");
 
@@ -198,9 +242,9 @@ async function main(): Promise<void> {
       dshVersion,
       provider: deepseek.id,
       model: selectedModel,
-      skill: "story-review",
+      skills: ["story-review", "short-drama-review"],
       roleCalls: roleCalls.length,
-      durableSessionEvents: events.length,
+      durableSessionEvents: { story: storyEvents.length, drama: dramaEvents.length },
       projectUnchanged: true
     })}\n`);
   } catch (error) {
