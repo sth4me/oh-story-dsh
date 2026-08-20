@@ -57,7 +57,7 @@ pnpm assets:check
 1. 更新版本与用户可见变更。
 2. 运行 `pnpm verify:release`。
 3. 运行 `pnpm test:dsh:real` 并确认项目摘要未改变、凭据未出现在日志中。
-4. 重新生成并检查 README 演示图。
+4. 运行 `pnpm demo:story` 与 `pnpm demo:drama`，重新生成并检查 README 演示图。
 5. 运行 `pnpm pack:release`，检查 tarball 后再执行外部发布。
 
 架构约束见 [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)，验证覆盖见 [`docs/VALIDATION.md`](docs/VALIDATION.md)。

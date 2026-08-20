@@ -2,13 +2,15 @@
 
 # oh-story-dsh
 
-**DeepSeek Harness 原生小说与短剧创作工作台**
+**小说与短剧创作工作台**
 
 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) · [Oh Story](https://github.com/worldwonderer/oh-story-claudecode) · [Drama Skills](https://github.com/worldwonderer/drama-skills) · [MIT](LICENSE)
 
 </div>
 
-`oh-story-dsh` 将 Oh Story 的小说方法库与 Drama Skills 的短剧生产流程带入 DeepSeek Harness。DSH 统一管理 Agent、会话、模型、权限和 Chat；插件提供创作 Skills、专业 Roles、项目协议与原生三栏工作台。
+`oh-story-dsh` 是基于 DeepSeek Harness（DSH）构建的社区插件，将 Oh Story 的小说方法库与 Drama Skills 的短剧生产流程带入 DSH。DSH 管理 Agent、会话、模型、权限和 Chat；插件提供创作 Skills、专业 Roles、项目协议与三栏工作台。
+
+> 本项目与 DeepSeek 官方无隶属、合作或背书关系；DeepSeek Harness 名称与品牌素材归其权利人所有。
 
 ## 小说工作台
 
@@ -35,8 +37,8 @@
 
 | 工作台 | 上游能力 | 主要入口 |
 | --- | --- | --- |
-| 小说 | Oh Story 0.7.6 · 13 Skills · 7 Roles | `/story`、`/story-long-write`、`/story-review` |
-| 短剧 | Drama Skills · 10 Skills | `/short-drama`、`/short-drama-write`、`/short-drama-storyboard` |
+| 小说 | [Oh Story 0.7.6](https://github.com/worldwonderer/oh-story-claudecode) · 13 Skills · 7 Roles | `/story`、`/story-long-write`、`/story-review` |
+| 短剧 | [Drama Skills](https://github.com/worldwonderer/drama-skills) · 10 Skills | `/short-drama`、`/short-drama-write`、`/short-drama-storyboard` |
 
 ## 安装
 
@@ -49,4 +51,4 @@ npx -y @deepseek-ai/dsh web
 
 在 DSH 中添加作品目录为 workspace，新建或打开 Session 后使用 `/story` 或 `/short-drama`。小说与短剧工作台也可以随时通过左栏 Tab 切换。
 
-[贡献指南](CONTRIBUTING.md) · [架构说明](docs/ARCHITECTURE.md) · [验证范围](docs/VALIDATION.md)
+[贡献指南](CONTRIBUTING.md) · [架构说明](docs/ARCHITECTURE.md)

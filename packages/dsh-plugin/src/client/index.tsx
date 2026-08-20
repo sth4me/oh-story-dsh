@@ -11,6 +11,7 @@ import {
   type WorkbenchMode,
   type FileMutationActivity
 } from "./file-activity.js";
+import { buildFileTree, type FileTreeNode } from "./file-tree.js";
 import { JsonlPreview } from "./jsonl-preview.js";
 import { MarkdownPreview } from "./markdown-preview.js";
 import styles from "./plugin.css?inline";
@@ -68,6 +69,49 @@ async function json<T>(response: Response): Promise<T> {
   const value = await response.json() as T & { readonly error?: string };
   if (!response.ok) throw new Error(value.error ?? `HTTP ${String(response.status)}`);
   return value;
+}
+
+function FileTreeNodes({
+  nodes,
+  depth,
+  expanded,
+  selected,
+  activityPath,
+  onToggle,
+  onSelect
+}: {
+  readonly nodes: readonly FileTreeNode[];
+  readonly depth: number;
+  readonly expanded: Readonly<Record<string, boolean>>;
+  readonly selected: string | undefined;
+  readonly activityPath: string | undefined;
+  readonly onToggle: (path: string, open: boolean) => void;
+  readonly onSelect: (path: string) => void;
+}) {
+  return <>{nodes.map((node) => {
+    if (node.kind === "file") return <button
+      type="button"
+      key={node.path}
+      style={{ paddingLeft: `${String(14 + depth * 14)}px` }}
+      data-file-path={node.path}
+      data-agent-target={node.path === activityPath || undefined}
+      aria-current={node.path === selected ? "page" : undefined}
+      onClick={() => { onSelect(node.path); }}
+    >{node.name}</button>;
+    const open = expanded[node.path] ?? selected?.startsWith(`${node.path}/`) === true;
+    return <details className="oh-story-file-folder" key={node.path} open={open} onToggle={(event) => { onToggle(node.path, event.currentTarget.open); }}>
+      <summary style={{ paddingLeft: `${String(7 + depth * 14)}px` }}>{node.name}<span>{node.fileCount}</span></summary>
+      <FileTreeNodes
+        nodes={node.children}
+        depth={depth + 1}
+        expanded={expanded}
+        selected={selected}
+        activityPath={activityPath}
+        onToggle={onToggle}
+        onSelect={onSelect}
+      />
+    </details>;
+  })}</>;
 }
 
 function useWorkspace(sessionId: string): {
@@ -327,39 +371,18 @@ function CreativeWorkbench({ sessionId, useSession }: Pick<ConvViewProps, "sessi
       {error !== undefined && <div className="oh-story-error">{error}</div>}
       <nav ref={navRef} aria-label={workbench === "story" ? "小说项目文件" : "短剧项目文件"}>
         {groups.map(([directory, files]) => {
-          const nested = new Map<string, WorkspaceFile[]>();
-          const direct: WorkspaceFile[] = [];
-          for (const file of files) {
-            const relative = file.path === "short-drama.json" ? file.path : file.path.slice(directory.length + 1);
-            const slash = relative.indexOf("/");
-            if (slash < 0) direct.push(file);
-            else {
-              const folder = relative.slice(0, slash);
-              const children = nested.get(folder) ?? [];
-              children.push(file);
-              nested.set(folder, children);
-            }
-          }
           const groupOpen = expanded[directory] ?? selectedGroup === directory;
-          const fileButton = (file: WorkspaceFile, label: string) => <button
-              type="button"
-              key={file.path}
-              data-file-path={file.path}
-              data-agent-target={file.path === activityPath || undefined}
-              aria-current={file.path === selected ? "page" : undefined}
-              onClick={() => { setSelected(file.path); }}
-            >{label}</button>;
           return <details className="oh-story-file-group" key={directory} open={groupOpen} onToggle={(event) => { toggleGroup(directory, event.currentTarget.open); }}>
             <summary>{directory}<span>{files.length}</span></summary>
-            {direct.map((file) => fileButton(file, file.path === "short-drama.json" ? file.path : file.path.slice(directory.length + 1)))}
-            {[...nested.entries()].map(([folder, children]) => {
-              const key = `${directory}/${folder}`;
-              const nestedOpen = expanded[key] ?? selected?.startsWith(`${key}/`) === true;
-              return <details className="oh-story-file-folder" key={key} open={nestedOpen} onToggle={(event) => { toggleGroup(key, event.currentTarget.open); }}>
-                <summary>{folder}<span>{children.length}</span></summary>
-                {children.map((file) => fileButton(file, file.path.slice(key.length + 1)))}
-              </details>;
-            })}
+            <FileTreeNodes
+              nodes={buildFileTree(files, directory)}
+              depth={1}
+              expanded={expanded}
+              selected={selected}
+              activityPath={activityPath}
+              onToggle={toggleGroup}
+              onSelect={setSelected}
+            />
           </details>;
         })}
       </nav>

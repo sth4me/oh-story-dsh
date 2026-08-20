@@ -10,12 +10,12 @@ const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const dshVersion = "0.1.0-rc.8";
 const demoFramesDirectory = process.env.OH_STORY_DEMO_FRAMES_DIR;
 
-async function captureDemoFrame(page: Page, index: number): Promise<void> {
+async function captureDemoFrame(page: Page, workbench: "story" | "drama", index: number): Promise<void> {
   if (demoFramesDirectory === undefined) return;
   await mkdir(demoFramesDirectory, { recursive: true });
   await page.waitForTimeout(180);
   await page.screenshot({
-    path: join(demoFramesDirectory, `story-${String(index).padStart(2, "0")}.png`),
+    path: join(demoFramesDirectory, `${workbench}-${String(index).padStart(2, "0")}.png`),
     animations: "disabled"
   });
 }
@@ -23,17 +23,24 @@ async function captureDemoFrame(page: Page, index: number): Promise<void> {
 async function prepareDemoSurface(page: Page): Promise<void> {
   if (demoFramesDirectory === undefined) return;
   const failure = page.getByText(/^This (?:turn|has) failed\b/iu).first();
-  if (await failure.count() === 0) return;
-  await failure.evaluate((element) => {
-    let container = element as HTMLElement;
-    while (container.parentElement !== null) {
-      const parent = container.parentElement;
-      const box = parent.getBoundingClientRect();
-      if (box.height > 240 || box.width > 520) break;
-      container = parent;
-    }
-    container.style.display = "none";
-  });
+  if (await failure.count() > 0) {
+    await failure.evaluate((element) => {
+      let container = element as HTMLElement;
+      while (container.parentElement !== null) {
+        const parent = container.parentElement;
+        const box = parent.getBoundingClientRect();
+        if (box.height > 240 || box.width > 520) break;
+        container = parent;
+      }
+      container.style.display = "none";
+    });
+    if (await failure.isVisible()) throw new Error("Credential failure card remained visible on the demo surface.");
+  }
+  const collapse = page.getByRole("button", { name: /^(?:Collapse sidebar|收起侧边栏)$/u }).first();
+  await collapse.waitFor({ state: "visible", timeout: 10_000 });
+  await collapse.click();
+  await page.getByRole("button", { name: /^(?:Open sidebar|打开侧边栏)$/u }).first().waitFor({ state: "visible", timeout: 10_000 });
+  await page.waitForTimeout(350);
 }
 
 function run(command: string, args: readonly string[], env: NodeJS.ProcessEnv = process.env): void {
@@ -111,8 +118,10 @@ async function main(): Promise<void> {
       mkdir(join(fixtureRoot, "大纲"), { recursive: true }),
       mkdir(join(fixtureRoot, "设定", "角色"), { recursive: true }),
       mkdir(join(fixtureRoot, "追踪"), { recursive: true }),
-      mkdir(join(fixtureRoot, "剧集"), { recursive: true }),
-      mkdir(join(fixtureRoot, "项目开发"), { recursive: true })
+      mkdir(join(fixtureRoot, "剧集", "EP001", "分镜"), { recursive: true }),
+      mkdir(join(fixtureRoot, "项目开发"), { recursive: true }),
+      mkdir(join(fixtureRoot, "设定集", "角色"), { recursive: true }),
+      mkdir(join(fixtureRoot, "交付", "EP001"), { recursive: true })
     ]);
     await Promise.all([
       writeFile(join(fixtureRoot, "正文", "第001章_雨夜.md"), [
@@ -139,8 +148,27 @@ async function main(): Promise<void> {
         title: "雨停之前",
         format: { aspect_ratio: "9:16", episode_count: 8 }
       }, null, 2)}\n`),
-      writeFile(join(fixtureRoot, "剧集", "第01集.md"), "# 第 01 集\n\n## 1-1 旧站 / 夜 / 外\n\n雨水漫过站台边缘。\n"),
-      writeFile(join(fixtureRoot, "项目开发", "series-bible.md"), "# 系列圣经\n\n现实主义竖屏短剧。\n")
+      writeFile(join(fixtureRoot, "剧集", "EP001", "screenplay.md"), [
+        "# EP001 雨停之前", "", "> 本集钩子：失踪二十三年的末班车，在暴雨夜重新进站。", "",
+        "## 1-1 旧渡站 / 夜 / 外", "", "雨水漫过站台边缘。林舟追着一张泛黄车票冲进候车厅。", "",
+        "电子钟从 **23:47** 跳回 **00:01**。", "", "售票窗后传来女人的声音：", "",
+        "“你终于来接我了。”"
+      ].join("\n")),
+      writeFile(join(fixtureRoot, "剧集", "EP001", "分镜", "shots.jsonl"), [
+        '{"record_type":"shot","shot_id":"EP001-SC001-SH001","title":"雨夜建立镜头","status":"approved","scale":"wide"}',
+        '{"record_type":"shot","shot_id":"EP001-SC001-SH002","title":"车票特写","status":"draft","scale":"close-up"}'
+      ].join("\n") + "\n"),
+      writeFile(join(fixtureRoot, "项目开发", "creative-brief.md"), [
+        "# 《雨停之前》创作简报", "", "## 项目定位", "",
+        "| 维度 | 决策 |", "| --- | --- |", "| 类型 | 都市悬疑 · 亲情救赎 |", "| 规格 | 8 集 · 9:16 |", "| 核心钩子 | 末班车连接两个时间 |", "",
+        "- [x] 首集建立失踪谜案", "- [x] 每集保留时间倒计时", "- [ ] 第四集揭示母亲身份"
+      ].join("\n")),
+      writeFile(join(fixtureRoot, "设定集", "角色", "characters.jsonl"), [
+        '{"record_type":"character","character_id":"CHAR-LINZHOU","display_name":"林舟","status":"locked","role":"追查母亲失踪的记者"}',
+        '{"record_type":"character","character_id":"CHAR-SUYU","display_name":"苏雨","status":"mystery","role":"末班车售票员"}',
+        '{"record_type":"relationship","record_id":"REL-001","title":"林舟与苏雨","status":"hidden","truth":"母子"}'
+      ].join("\n") + "\n"),
+      writeFile(join(fixtureRoot, "交付", "EP001", "video-prompts.md"), "# EP001 视频提示词\n\n竖屏 9:16，冷蓝雨夜，镜头缓慢推进废弃售票窗。\n")
     ]);
     run("pnpm", ["--filter", "@oh-story/dsh", "build"]);
     run("pnpm", ["--filter", "@oh-story/dsh", "pack", "--pack-destination", packDirectory]);
@@ -260,7 +288,7 @@ async function main(): Promise<void> {
       if (await page.getByRole("button", { name: "已保存", exact: true }).count() !== 0) throw new Error("Editor header still renders a redundant saved button.");
       await page.getByRole("button", { name: "第001章_雨夜.md", exact: true }).click();
       await page.getByRole("article", { name: "正文/第001章_雨夜.md 渲染预览" }).waitFor({ state: "visible", timeout: 10_000 });
-      await captureDemoFrame(page, 1);
+      await captureDemoFrame(page, "story", 1);
       await page.locator(".oh-story-file-group > summary").filter({ hasText: "大纲" }).click();
       await page.getByRole("button", { name: "细纲_第001章.md", exact: true }).click();
       const outline = page.getByRole("article", { name: "大纲/细纲_第001章.md 渲染预览" });
@@ -268,22 +296,39 @@ async function main(): Promise<void> {
       if (await outline.locator("table").count() !== 1 || await outline.getByRole("checkbox").count() !== 3) {
         throw new Error("Markdown preview did not render the outline table and task list.");
       }
-      await captureDemoFrame(page, 2);
+      await captureDemoFrame(page, "story", 2);
       await page.locator(".oh-story-file-group > summary").filter({ hasText: "追踪" }).click();
       await page.getByRole("button", { name: "characters.jsonl", exact: true }).click();
       const jsonlPreview = page.getByRole("region", { name: "追踪/characters.jsonl 结构化预览" });
       await jsonlPreview.waitFor({ state: "visible", timeout: 10_000 });
       await jsonlPreview.getByText("2 条记录", { exact: true }).waitFor({ state: "visible", timeout: 10_000 });
-      await captureDemoFrame(page, 3);
+      await captureDemoFrame(page, "story", 3);
       await page.getByRole("tab", { name: "源码", exact: true }).click();
       await page.getByRole("textbox", { name: "追踪/characters.jsonl" }).waitFor({ state: "visible", timeout: 10_000 });
-      await captureDemoFrame(page, 4);
+      await captureDemoFrame(page, "story", 4);
       await page.getByRole("tab", { name: "短剧", exact: true }).click();
-      await page.getByRole("navigation", { name: "短剧项目文件" }).waitFor({ state: "visible", timeout: 10_000 });
-      await page.getByRole("button", { name: "第01集.md", exact: true }).click();
-      await page.getByRole("article", { name: "剧集/第01集.md 渲染预览" }).waitFor({ state: "visible", timeout: 10_000 });
-      await page.getByRole("tab", { name: "源码", exact: true }).click();
-      await page.getByRole("textbox", { name: "剧集/第01集.md" }).waitFor({ state: "visible", timeout: 10_000 });
+      const dramaTree = page.getByRole("navigation", { name: "短剧项目文件" });
+      await dramaTree.waitFor({ state: "visible", timeout: 10_000 });
+      await dramaTree.locator(".oh-story-file-folder > summary").filter({ hasText: "EP001" }).first().waitFor({ state: "visible", timeout: 10_000 });
+      await dramaTree.locator(".oh-story-file-folder > summary").filter({ hasText: "分镜" }).waitFor({ state: "visible", timeout: 10_000 });
+      await page.getByRole("button", { name: "screenplay.md", exact: true }).click();
+      await page.getByRole("article", { name: "剧集/EP001/screenplay.md 渲染预览" }).waitFor({ state: "visible", timeout: 10_000 });
+      await captureDemoFrame(page, "drama", 1);
+      await page.locator(".oh-story-file-group > summary").filter({ hasText: "项目开发" }).click();
+      await page.getByRole("button", { name: "creative-brief.md", exact: true }).click();
+      await page.getByRole("article", { name: "项目开发/creative-brief.md 渲染预览" }).waitFor({ state: "visible", timeout: 10_000 });
+      await captureDemoFrame(page, "drama", 2);
+      await page.locator(".oh-story-file-group > summary").filter({ hasText: "设定集" }).click();
+      await dramaTree.locator(".oh-story-file-folder > summary").filter({ hasText: "角色" }).click();
+      await page.getByRole("button", { name: "characters.jsonl", exact: true }).click();
+      const dramaJsonl = page.getByRole("region", { name: "设定集/角色/characters.jsonl 结构化预览" });
+      await dramaJsonl.waitFor({ state: "visible", timeout: 10_000 });
+      await dramaJsonl.getByText("3 条记录", { exact: true }).waitFor({ state: "visible", timeout: 10_000 });
+      await captureDemoFrame(page, "drama", 3);
+      await page.locator(".oh-story-file-group > summary").filter({ hasText: /^项目\d+$/u }).click();
+      await page.getByRole("button", { name: "short-drama.json", exact: true }).click();
+      await page.getByRole("textbox", { name: "short-drama.json" }).waitFor({ state: "visible", timeout: 10_000 });
+      await captureDemoFrame(page, "drama", 4);
       if (await page.getByRole("complementary", { name: "Agent 工作详情" }).count() !== 0) {
         throw new Error("Novel workspace still duplicates the official Agent activity UI.");
       }

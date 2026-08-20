@@ -39,7 +39,7 @@ The Browser entry uses two official extension slots:
 
 The bridge portals the file tree and editor into the stable `conversation.session` layout seam. The mounted official conversation view remains column three, so Chat state, streaming, tools, Todo, approvals, history and Composer continue to use DSH implementations.
 
-The workbench reads the public `ConversationSnapshot` fields `runningCalls` and `partial`. Active `write`, `edit` and `str_replace_editor` arguments are decoded while streaming, restricted to a supported creative path and projected over the last disk version. Selection changes also switch the 小说/短剧 mode and expand the matching tree group.
+The workbench reads the public `ConversationSnapshot` fields `runningCalls` and `partial`. Active `write`, `edit` and `str_replace_editor` arguments are decoded while streaming, restricted to a supported creative path and projected over the last disk version. The file tree preserves every project directory level; selection changes also switch the 小说/短剧 mode and expand the matching group plus all ancestor directories.
 
 When the Agent is idle, a capture listener recognizes existing workspace file links inside the official conversation. Those links update the same selection state used by Agent file following. Human-dirty buffers take precedence over incoming disk or Agent state and surface a conflict message.
 

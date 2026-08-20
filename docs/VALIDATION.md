@@ -40,11 +40,11 @@ Current deterministic result: 8 test files and 25 tests passing.
 - 13 Oh Story Skills and 10 Drama Skills in the Session catalog;
 - Session-scoped workspace reads and path-traversal rejection;
 - published Browser module and official UI slot registrations;
-- 小说/短剧 navigation, Markdown table/task rendering and JSONL structured rendering;
+- 小说/短剧 navigation, recursive project directories, Markdown table/task rendering and JSONL structured rendering;
 - source editing, saved-state behavior and no duplicate Agent activity UI;
 - ordered tree/editor/Chat geometry and a Composer that remains fixed during long-message scrolling.
 
-The same audited surface generates the novel demo through `pnpm demo:story`; the command captures four current DSH states and replaces `docs/images/oh-story-dsh-demo.gif` deterministically.
+The same audited surface generates both README demos through `pnpm demo:story` and `pnpm demo:drama`. Each command collapses the DSH navigation rail, removes the expected credential-less failure card from the capture surface, records four current workbench states, and replaces its GIF deterministically.
 
 ## Real DeepSeek observation
 
@@ -72,5 +72,6 @@ pnpm test:dsh
 pnpm verify:release
 DEEPSEEK_API_KEY_FILE=/path/to/key pnpm test:dsh:real
 pnpm demo:story
+pnpm demo:drama
 pnpm pack:release
 ```

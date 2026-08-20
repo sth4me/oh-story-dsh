@@ -1,7 +1,7 @@
 {
   "name": "@oh-story/dsh",
   "version": "0.1.0-alpha.0",
-  "description": "Native DeepSeek Harness workbenches for fiction and short-drama production",
+  "description": "A DSH plugin for fiction and short-drama production",
   "keywords": [
     "deepseek-harness",
     "dsh-plugin",

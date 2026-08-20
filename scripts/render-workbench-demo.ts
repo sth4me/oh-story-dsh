@@ -5,8 +5,13 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const frames = await mkdtemp(join(tmpdir(), "oh-story-dsh-demo-"));
-const output = resolve(repositoryRoot, "docs/images/oh-story-dsh-demo.gif");
+const workbench = process.argv[2];
+if (workbench !== "story" && workbench !== "drama") throw new Error("Usage: render-workbench-demo.ts <story|drama>");
+
+const frames = await mkdtemp(join(tmpdir(), `oh-story-dsh-${workbench}-demo-`));
+const output = resolve(repositoryRoot, workbench === "story"
+  ? "docs/images/oh-story-dsh-demo.gif"
+  : "docs/images/short-drama-dsh-demo.gif");
 
 function run(command: string, args: readonly string[], env = process.env): void {
   const result = spawnSync(command, args, { cwd: repositoryRoot, env, encoding: "utf8", stdio: "inherit" });
@@ -19,7 +24,7 @@ try {
     "-v", "error",
     "-framerate", "1/2",
     "-start_number", "1",
-    "-i", join(frames, "story-%02d.png"),
+    "-i", join(frames, `${workbench}-%02d.png`),
     "-filter_complex",
     "scale=1200:-2:flags=lanczos,split[original][palette];[palette]palettegen=max_colors=128:stats_mode=diff[p];[original][p]paletteuse=dither=bayer:bayer_scale=3:diff_mode=rectangle",
     "-loop", "0",

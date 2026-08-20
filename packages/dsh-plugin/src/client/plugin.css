@@ -154,7 +154,6 @@
   font-weight: 600;
 }
 .oh-story-file-group > summary { margin-top: 3px; }
-.oh-story-file-folder > summary { padding-left: 14px; }
 .oh-story-file-group > summary::-webkit-details-marker,
 .oh-story-file-folder > summary::-webkit-details-marker { display: none; }
 .oh-story-file-group > summary::before,
@@ -182,8 +181,6 @@
   font: inherit;
   font-size: 12px;
 }
-.oh-story-file-folder > button { padding-left: 28px; }
-
 .oh-story-tree nav button:hover { background: var(--dsw-alias-interactive-bg-hover); }
 .oh-story-tree nav button[aria-current="page"] { background: var(--dsw-alias-button-ghost-active-fill); color: var(--dsw-alias-label-primary); }
 .oh-story-tree nav button[data-agent-target] { box-shadow: inset 2px 0 var(--dsw-alias-state-business-primary); }
