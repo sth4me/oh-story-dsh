@@ -1,0 +1,40 @@
+{
+  "name": "oh-story-dsh",
+  "version": "0.1.0-alpha.0",
+  "private": true,
+  "description": "Pure DeepSeek Harness workbenches for Oh Story fiction and Drama Skills",
+  "license": "MIT",
+  "type": "module",
+  "packageManager": "pnpm@11.7.0",
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "scripts": {
+    "dev": "pnpm build:dsh-plugin",
+    "build:dsh-plugin": "pnpm --filter @oh-story/dsh build",
+    "build": "pnpm -r --if-present build",
+    "typecheck": "pnpm -r --if-present typecheck",
+    "lint": "eslint . --max-warnings=0",
+    "test": "pnpm -r --if-present test",
+    "test:dsh": "pnpm test:dsh:native",
+    "test:dsh:native": "tsx scripts/native-dsh-smoke.ts",
+    "test:dsh:real": "tsx scripts/native-dsh-real.ts",
+    "assets:sync": "pnpm assets:sync:story && pnpm assets:sync:drama",
+    "assets:sync:story": "tsx scripts/sync-oh-story-assets.ts",
+    "assets:sync:drama": "tsx scripts/sync-drama-assets.ts",
+    "assets:check": "tsx scripts/check-upstream-parity.ts && tsx scripts/check-drama-parity.ts",
+    "dsh:boundary": "tsx scripts/check-dsh-boundary.ts",
+    "verify": "pnpm lint && pnpm typecheck && pnpm assets:check && pnpm dsh:boundary && pnpm test && pnpm build"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@playwright/test": "1.62.1",
+    "@types/node": "25.5.0",
+    "esbuild": "0.28.2",
+    "eslint": "10.8.1",
+    "tsx": "4.23.12",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.67.0",
+    "vitest": "4.1.11"
+  }
+}
