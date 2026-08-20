@@ -23,7 +23,6 @@ interface WorkspaceFile { readonly path: string; readonly bytes: number }
 interface WorkspacePayload {
   readonly cwd: string;
   readonly files: readonly WorkspaceFile[];
-  readonly tracking: Record<string, unknown> | null;
   readonly shortDrama: Record<string, unknown> | null;
   readonly mode: "dsh-session";
 }
@@ -357,16 +356,6 @@ function CreativeWorkbench({ sessionId, useSession }: Pick<ConvViewProps, "sessi
     });
   }, [activityPath, workbench, workspace]);
 
-  const tracking = workspace?.tracking;
-  const chapter = typeof tracking?.last_committed_chapter === "number" ? tracking.last_committed_chapter : undefined;
-  const revision = typeof tracking?.state_revision === "number" ? tracking.state_revision : undefined;
-  const drama = workspace?.shortDrama;
-  const dramaTitle = typeof drama?.title === "string" ? drama.title : undefined;
-  const dramaFormat = typeof drama?.format === "object" && drama.format !== null && !Array.isArray(drama.format)
-    ? drama.format as Record<string, unknown>
-    : undefined;
-  const episodeCount = typeof dramaFormat?.episode_count === "number" ? dramaFormat.episode_count : undefined;
-  const aspectRatio = typeof dramaFormat?.aspect_ratio === "string" ? dramaFormat.aspect_ratio : undefined;
   const selectWorkbench = (next: WorkbenchMode): void => {
     setWorkbench(next);
     setConflict(undefined);
@@ -389,11 +378,6 @@ function CreativeWorkbench({ sessionId, useSession }: Pick<ConvViewProps, "sessi
         <button type="button" role="tab" aria-selected={workbench === "story"} onClick={() => { selectWorkbench("story"); }}>小说</button>
         <button type="button" role="tab" aria-selected={workbench === "drama"} onClick={() => { selectWorkbench("drama"); }}>短剧</button>
       </div>
-      {workspace !== undefined && <div className="oh-story-meta">
-        {workbench === "story"
-          ? <>{chapter === undefined ? "尚未建立 Tracking" : `已提交 ${String(chapter)} 章`}{revision === undefined ? "" : ` · r${String(revision)}`}</>
-          : <>{dramaTitle ?? "尚未初始化短剧"}{episodeCount === undefined ? "" : ` · ${String(episodeCount)} 集`}{aspectRatio === undefined ? "" : ` · ${aspectRatio}`}</>}
-      </div>}
       {error !== undefined && <div className="oh-story-error">{error}</div>}
       <nav ref={navRef} aria-label={workbench === "story" ? "小说项目文件" : "短剧项目文件"}>
         {groups.map(([directory, files]) => {

@@ -136,7 +136,6 @@
   content: "";
 }
 
-.oh-story-meta { min-height: 18px; padding: 0 7px 10px; overflow: hidden; color: var(--os-muted); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
 .oh-story-file-group,
 .oh-story-file-folder { margin: 0; }
 .oh-story-file-group > summary,

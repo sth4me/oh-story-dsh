@@ -36,16 +36,16 @@ Current deterministic result: 11 test files and 32 tests passing.
 
 ## Native DSH Web audit
 
-`pnpm test:dsh` creates an isolated DSH installation and profile, packs `@oh-story/dsh`, installs the tarball through `dsh plugin --profile web add`, and starts the official Web UI. The Chrome pass verifies:
+`pnpm test:dsh` creates an isolated DSH installation and profile, packs `@oh-story/dsh`, installs the tarball through `dsh plugin --profile web add`, and starts the official Web UI. It copies the pinned public demo projects from Oh Story (`让你管账号，你高燃混剪炸全网`) and Drama Skills (`善意不结账`) into temporary workspaces; their source repositories, commits and paths are recorded in `scripts/demo-fixtures/sources.json`. The Chrome pass verifies:
 
 - 13 Oh Story Skills and 10 Drama Skills in the Session catalog;
 - Session-scoped workspace reads, stale-write rejection and path-traversal rejection;
 - published Browser module and official UI slot registrations;
-- 小说/短剧 navigation, recursive project directories, Markdown table/task rendering and JSONL structured rendering;
+- 小说/短剧 navigation, recursive project directories, Markdown structure and JSONL structured rendering;
 - source editing, saved-state behavior and no duplicate Agent activity UI;
 - ordered tree/editor/Chat geometry and a Composer that remains fixed during long-message scrolling.
 
-The same audited surface generates both README demos through `pnpm demo:story` and `pnpm demo:drama`. Each command collapses the DSH navigation rail, crops the capture to the real workbench (so the credential-less smoke turn is not presented as a model demo), records four current workbench states, and replaces its GIF deterministically.
+The same audited surface generates the README demos through `pnpm demo` (both), `pnpm demo:story`, or `pnpm demo:drama`. Demo commands require `DEEPSEEK_API_KEY`, use the real `deepseek-official` provider, wait for successful assistant turns, collapse the DSH navigation rail, and record the complete tree/editor/Chat surface. The API key is process-only and is redacted from captured failure logs.
 
 ## Real DeepSeek observation
 
@@ -72,7 +72,6 @@ pnpm verify
 pnpm test:dsh
 pnpm verify:release
 DEEPSEEK_API_KEY_FILE=/path/to/key pnpm test:dsh:real
-pnpm demo:story
-pnpm demo:drama
+DEEPSEEK_API_KEY=... pnpm demo
 pnpm pack:release
 ```

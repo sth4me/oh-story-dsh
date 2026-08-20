@@ -20,6 +20,7 @@
     "test:dsh": "pnpm test:dsh:native",
     "test:dsh:native": "tsx scripts/native-dsh-smoke.ts",
     "test:dsh:real": "tsx scripts/native-dsh-real.ts",
+    "demo": "tsx scripts/render-workbench-demo.ts all",
     "demo:story": "tsx scripts/render-workbench-demo.ts story",
     "demo:drama": "tsx scripts/render-workbench-demo.ts drama",
     "assets:sync": "pnpm assets:sync:story && pnpm assets:sync:drama",
