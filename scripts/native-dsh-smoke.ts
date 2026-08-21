@@ -1,6 +1,6 @@
 import { spawn, spawnSync, type ChildProcess } from "node:child_process";
 import { cp, mkdir, mkdtemp, readdir, realpath, rm, writeFile } from "node:fs/promises";
-import { createServer as createHttpServer, type Server as HttpServer } from "node:http";
+import { createServer as createHttpServer, request as httpRequest, type Server as HttpServer } from "node:http";
 import { createServer as createNetServer } from "node:net";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
@@ -176,6 +176,25 @@ async function prepareSession(origin: string, sessionId: string, prompt: string,
   await rpc(origin, "session.rename", { sessionId, title });
 }
 
+/** Send one request with headers verbatim; fetch silently drops a forged Host. */
+async function rawStatus(target: string, headers: Readonly<Record<string, string>>): Promise<number> {
+  const url = new URL(target);
+  return new Promise<number>((accept, reject) => {
+    const call = httpRequest({
+      host: url.hostname,
+      port: url.port,
+      path: `${url.pathname}${url.search}`,
+      method: "GET",
+      headers: { host: url.host, ...headers }
+    }, (response) => {
+      response.resume();
+      response.once("end", () => { accept(response.statusCode ?? 0); });
+    });
+    call.once("error", reject);
+    call.end();
+  });
+}
+
 async function ensureOpen(summary: ReturnType<Page["locator"]>): Promise<void> {
   const details = summary.locator("..");
   const open = await details.evaluate((element) => (element as HTMLDetailsElement).open);
@@ -337,6 +356,23 @@ async function main(): Promise<void> {
     const unchanged = await unchangedWrite.json() as { readonly version?: string };
     if (!unchangedWrite.ok || unchanged.version !== chapter.version) {
       throw new Error(`Workspace optimistic save failed: ${JSON.stringify(unchanged)}`);
+    }
+    // The Host/Origin/Fetch-Metadata fence is unit-tested in isolation; assert it
+    // against the mounted route so dropping it from the handler cannot pass CI.
+    // These go over node:http because fetch refuses to forge a Host header.
+    // The same-origin control keeps the rejections below from passing vacuously.
+    const trusted = await rawStatus(chapterUrl, { "sec-fetch-site": "same-origin" });
+    if (trusted !== 200) throw new Error(`Workspace route rejected a same-origin request: ${String(trusted)}.`);
+    for (const [label, headers] of [
+      ["rebound Host", { host: "attacker.example" }],
+      ["cross-site marker", { "sec-fetch-site": "cross-site" }],
+      ["foreign Origin", { origin: "http://attacker.example" }],
+      ["opaque Origin", { origin: "null" }]
+    ] as const) {
+      const status = await rawStatus(chapterUrl, headers);
+      if (status !== 403) {
+        throw new Error(`Workspace route served an untrusted request (${label}): ${String(status)}.`);
+      }
     }
 
     const index = await (await fetch(origin)).text();
