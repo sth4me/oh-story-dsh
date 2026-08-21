@@ -42,18 +42,28 @@
 
 ## 安装
 
-需要 Node.js 24+。安装插件并启动 DSH Web：
+需要 Node.js 24+。
+
+**1. 安装插件并启动 DSH Web**
 
 ```bash
 npx -y @deepseek-ai/dsh@0.1.0-rc.8 plugin --profile web add @oh-story/dsh@0.1.0
 npx -y @deepseek-ai/dsh@0.1.0-rc.8 web
 ```
 
-在 DSH 中添加作品目录为 workspace，新建或打开 Session 后使用 `/story` 或 `/short-drama`。小说与短剧工作台也可以随时通过左栏 Tab 切换。
+默认在 `http://127.0.0.1:3080` 打开。
+
+**2. 配置模型**
+
+首次使用需要在 DSH 的「设置 → 模型」中添加 Provider 并填入 API Key；也可以在启动前设置环境变量 `DEEPSEEK_API_KEY`。模型、凭据与权限均由 DSH 管理，本插件不接触。
+
+**3. 开始创作**
+
+添加作品目录为 workspace，新建或打开 Session 后使用 `/story` 或 `/short-drama`。小说与短剧工作台可随时通过左栏 Tab 切换。
 
 ## 致谢
 
 - [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)：提供原生插件运行时、Agent、会话、权限审批与 Web 工作台基础。
 - [LINUX DO](https://linux.do/)：感谢社区的交流、反馈与开源支持。
 
-[贡献指南](CONTRIBUTING.md) · [架构说明](docs/ARCHITECTURE.md)
+[贡献指南](CONTRIBUTING.md) · [架构说明](docs/ARCHITECTURE.md) · [安全策略](SECURITY.md)
