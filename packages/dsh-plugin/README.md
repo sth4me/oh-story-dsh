@@ -18,8 +18,8 @@
 ## 安装
 
 ```bash
-npx -y @deepseek-ai/dsh@0.1.0-rc.8 plugin --profile web add @oh-story/dsh@0.1.0
-npx -y @deepseek-ai/dsh@0.1.0-rc.8 web
+npx -y @deepseek-ai/dsh@0.1.1-rc.1 plugin --profile web add @oh-story/dsh@0.1.0
+npx -y @deepseek-ai/dsh@0.1.1-rc.1 web
 ```
 
 需要 Node.js 24+。首次使用需要在 DSH 的「设置 → 模型」中添加 Provider 并填入 API Key，或在启动前设置环境变量 `DEEPSEEK_API_KEY`。

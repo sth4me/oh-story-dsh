@@ -8,7 +8,7 @@ import { parseEnv } from "node:util";
 import { fileURLToPath } from "node:url";
 
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const dshVersion = "0.1.0-rc.8";
+const dshVersion = "0.1.1-rc.1";
 
 function run(command: string, args: readonly string[], env: NodeJS.ProcessEnv = process.env): void {
   const result = spawnSync(command, args, { cwd: repositoryRoot, env, encoding: "utf8", stdio: "pipe" });

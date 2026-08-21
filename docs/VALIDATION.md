@@ -1,6 +1,6 @@
 # Validation
 
-Target: DeepSeek Harness `0.1.0-rc.8` · validated 2026-08-20.
+Target: DeepSeek Harness `0.1.1-rc.1` · validated 2026-08-21.
 
 ## Test architecture
 
@@ -51,8 +51,8 @@ The same audited surface generates the README demos through `pnpm demo` (both), 
 
 The release test used `deepseek-official/deepseek-v4-flash` against the packed plugin:
 
-- `story-review` completed with 4 `oh_story_role` calls and 20,003 durable Session events;
-- `short-drama-review` completed with 7,816 durable Session events;
+- `story-review` completed with 3 `oh_story_role` calls and 18,901 durable Session events;
+- `short-drama-review` completed with 7,499 durable Session events;
 - both sessions produced durable assistant output;
 - the combined fiction/short-drama project digest remained unchanged;
 - the API credential did not appear in captured DSH logs.

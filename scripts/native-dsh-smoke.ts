@@ -8,7 +8,7 @@ import { fileURLToPath } from "node:url";
 import { chromium, type Page } from "@playwright/test";
 
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const dshVersion = "0.1.0-rc.8";
+const dshVersion = "0.1.1-rc.1";
 const demoFramesDirectory = process.env.OH_STORY_DEMO_FRAMES_DIR;
 const useRealDeepSeek = process.env.OH_STORY_DEMO_USE_REAL_DEEPSEEK === "1";
 const storyProjectName = "让你管账号，你高燃混剪炸全网";
